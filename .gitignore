@@ -31,3 +31,16 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### OS / OneDrive ###
+Thumbs.db
+desktop.ini
+.DS_Store
+
+### Logs ###
+*.log
+logs/
+
+### Secrets / env ###
+.env
+*.env
