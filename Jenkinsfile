@@ -13,12 +13,19 @@ pipeline {
         timestamps()
         disableConcurrentBuilds()
     }
+    environment {
+        // Repository name on Docker Hub; the account (namespace) is taken from the
+        // 'docker-hub-repo' credential of the Jenkins running the pipeline.
+        IMAGE_REPO = 'tpfoyer'
+    }
 
     stages {
         stage('INIT') {
             steps {
                 script {
                     gv = load 'script.groovy'
+                    env.IMAGE_NAME = gv.resolveImageName()
+                    echo "Docker image: ${env.IMAGE_NAME}"
                 }
             }
         }
