@@ -72,8 +72,6 @@ public class SpringDocConfig {
         return GroupedOpenApi.builder()
                 .group("Only Universite Management API")
                 .pathsToMatch("/api/universites/**")
-                .pathsToExclude("**")
                 .build();
     }
 }
-

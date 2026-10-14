@@ -14,7 +14,7 @@ import java.util.List;
 @AllArgsConstructor
 @Slf4j
 @FieldDefaults(level = AccessLevel.PRIVATE)
-@RequestMapping("api/univeristes")
+@RequestMapping("api/universites")
 public class UniversiteController {
     IUniversiteService universiteService;
 
