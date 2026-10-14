@@ -39,15 +39,7 @@ pipeline {
             }
         }
 
-        stage('ARTIFACT CONSTRUCTION') {
-            steps {
-                script {
-                    gv.buildArtifact()
-                }
-            }
-        }
-
-        stage('UNIT TESTS + INTEGRATION TEST') {
+        stage('UNIT TESTS') {
             steps {
                 script {
                     gv.unitTests()
@@ -59,6 +51,30 @@ pipeline {
                         testResults: 'target/surefire-reports/*.xml',
                         allowEmptyResults: true
                     )
+                }
+            }
+        }
+
+        stage('INTEGRATION TESTS') {
+            steps {
+                script {
+                    gv.integrationTests()
+                }
+            }
+            post {
+                always {
+                    junit(
+                        testResults: 'target/failsafe-reports/*.xml',
+                        allowEmptyResults: true
+                    )
+                }
+            }
+        }
+
+        stage('ARTIFACT CONSTRUCTION') {
+            steps {
+                script {
+                    gv.buildArtifact()
                 }
             }
         }

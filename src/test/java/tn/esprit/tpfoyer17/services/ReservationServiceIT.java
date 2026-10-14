@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @SpringBootTest
 @Transactional
-class ReservationServiceTest {
+class ReservationServiceIT {
 
     @Autowired
     IReservationService reservationService;

@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @SpringBootTest
 @Transactional
-class UniversiteServiceTest {
+class UniversiteServiceIT {
 
     @Autowired
     IUniversiteService universiteService;

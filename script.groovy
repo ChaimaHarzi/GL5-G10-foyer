@@ -17,8 +17,15 @@ def buildArtifact() {
     )
 }
 
+// Unit tests: *Test.java (Mockito, no Spring context), run by Surefire
 def unitTests() {
     sh 'mvn -B -ntp test'
+}
+
+// Integration tests: *IT.java (Spring context + H2), run by Failsafe.
+// Reuses the classes compiled by the unit test stage.
+def integrationTests() {
+    sh 'mvn -B -ntp failsafe:integration-test failsafe:verify'
 }
 
 def sonarQube() {
