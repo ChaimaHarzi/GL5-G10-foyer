@@ -24,8 +24,9 @@ def unitTests() {
 
 // Integration tests: *IT.java (Spring context + H2), run by Failsafe.
 // Reuses the classes compiled by the unit test stage.
+// JaCoCo appends their coverage to the unit test coverage, then writes the report for SonarQube.
 def integrationTests() {
-    sh 'mvn -B -ntp failsafe:integration-test failsafe:verify'
+    sh 'mvn -B -ntp jacoco:prepare-agent failsafe:integration-test failsafe:verify jacoco:report'
 }
 
 def sonarQube() {
