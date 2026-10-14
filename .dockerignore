@@ -1,0 +1,19 @@
+# Everything Docker does not need to build the image
+.git
+.gitignore
+.idea
+.vscode
+.github
+.mvn
+mvnw
+mvnw.cmd
+src
+*.md
+Jenkinsfile
+script.groovy
+ci-settings.xml
+pom.xml
+
+# In target/, keep only the executable jar
+target/*
+!target/*.jar

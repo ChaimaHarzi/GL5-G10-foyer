@@ -53,12 +53,33 @@ def publishToNexus() {
     }
 }
 
-def buildImage() {
-    echo 'Doing step 7: Simulating Docker image construction...'
+// Docker image name "<docker hub account>/<IMAGE_REPO>": the account is the username of the
+// 'docker-hub-repo' credential, so each Jenkins pushes to the account it is allowed to write to.
+def resolveImageName() {
+    def name
+    withCredentials([usernamePassword(credentialsId: 'docker-hub-repo',
+            usernameVariable: 'DOCKER_USER',
+            passwordVariable: 'DOCKER_PASS')]) {
+        name = "${env.DOCKER_USER.toLowerCase()}/${env.IMAGE_REPO}".toString()
+    }
+    return name
 }
 
+// Docker: builds the image from the Dockerfile, tagged with the Jenkins build number and "latest".
+def buildImage() {
+    sh "docker build -t ${env.IMAGE_NAME}:${env.BUILD_NUMBER} -t ${env.IMAGE_NAME}:latest ."
+}
+
+// Docker Hub: logs in with the 'docker-hub-repo' credential and pushes both tags.
 def deployImage() {
-    echo 'Doing step 8: Simulating Docker image deployment...'
+    withCredentials([usernamePassword(credentialsId: 'docker-hub-repo',
+            usernameVariable: 'DOCKER_USER',
+            passwordVariable: 'DOCKER_PASS')]) {
+        sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+        sh "docker push ${env.IMAGE_NAME}:${env.BUILD_NUMBER}"
+        sh "docker push ${env.IMAGE_NAME}:latest"
+    }
+    sh 'docker logout'
 }
 
 def testAwsCredentials() {
