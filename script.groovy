@@ -43,9 +43,14 @@ def sonarQube() {
     }
 }
 
-
+// Nexus: publishes the jar (maven-snapshots for -SNAPSHOT versions, maven-releases otherwise).
+// Credentials come from the 'nexus-creds' Jenkins credential and are read by ci-settings.xml.
 def publishToNexus() {
-    echo 'Doing step 6: Simulating publication of the JAR to Nexus...'
+    withCredentials([usernamePassword(credentialsId: 'nexus-creds',
+            usernameVariable: 'NEXUS_USER',
+            passwordVariable: 'NEXUS_PASS')]) {
+        sh 'mvn -B -ntp -s ci-settings.xml deploy -DskipTests'
+    }
 }
 
 def buildImage() {
