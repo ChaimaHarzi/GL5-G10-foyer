@@ -29,9 +29,20 @@ def integrationTests() {
     sh 'mvn -B -ntp jacoco:prepare-agent failsafe:integration-test failsafe:verify jacoco:report'
 }
 
+// SonarQube: static analysis of the code + coverage read from the JaCoCo report
+// (target/site/jacoco/jacoco.xml, produced by the test stages).
 def sonarQube() {
-    echo 'Doing step 5: Simulating SonarQube code analysis...'
+    withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+        sh '''
+            mvn -B -ntp sonar:sonar \
+              -Dsonar.host.url=http://sonarqube:9000 \
+              -Dsonar.token=$SONAR_TOKEN \
+              -Dsonar.projectKey=tpFoyer-17 \
+              -Dsonar.projectName=tpFoyer-17
+        '''
+    }
 }
+
 
 def publishToNexus() {
     echo 'Doing step 6: Simulating publication of the JAR to Nexus...'
