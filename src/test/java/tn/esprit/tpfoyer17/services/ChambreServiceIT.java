@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @SpringBootTest
 @Transactional
-class ChambreServiceTest {
+class ChambreServiceIT {
 
     @Autowired
     IChambreService chambreService;
