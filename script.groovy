@@ -82,20 +82,48 @@ def deployImage() {
     sh 'docker logout'
 }
 
+// Wraps EKS commands: injects the AWS keys from the Jenkins credentials and points kubectl at the kubeconfig.
+def withEks(Closure body) {
+    withCredentials([
+            string(credentialsId: 'jenkins_aws_access_key_id', variable: 'AWS_ACCESS_KEY_ID'),
+            string(credentialsId: 'jenkins_aws_secret_access_key', variable: 'AWS_SECRET_ACCESS_KEY')
+    ]) {
+        withEnv(['AWS_DEFAULT_REGION=us-west-2',
+                 'KUBECONFIG=/var/jenkins_home/.kube/config']) {
+            body()
+        }
+    }
+}
+
+// Step 9: checks that the tools exist and the credentials are injected (values stay masked).
 def testAwsCredentials() {
-    echo 'Doing step 9: Simulating AWS credentials validation...'
+    withEks {
+        sh 'kubectl version --client'
+        sh 'aws-iam-authenticator version'
+        sh 'test -n "$AWS_ACCESS_KEY_ID" && echo "AWS access key is set"'
+    }
 }
 
 def setupTerraform() {
     echo 'Doing step 10: Simulating Terraform infrastructure provisioning...'
 }
 
+// Step 11: checks that the kubeconfig exists and points to the EKS cluster.
 def updateKubeconfig() {
-    echo 'Doing step 11: Simulating Kubernetes kubeconfig update...'
+    withEks {
+        sh 'test -f "$KUBECONFIG" && echo "kubeconfig found"'
+        sh 'kubectl config get-contexts'
+        sh 'kubectl config current-context'
+    }
 }
 
+// Step 12: read-only connection test against the cluster (nothing is created).
 def deployToAwsKubernetes() {
-    echo 'Doing step 12: Simulating deployment to AWS Kubernetes...'
+    withEks {
+        sh 'kubectl get nodes'
+        sh 'kubectl get pods -A'
+        sh 'kubectl auth can-i create deployments'
+    }
 }
 
 return this
