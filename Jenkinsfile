@@ -13,10 +13,18 @@ pipeline {
         timestamps()
         disableConcurrentBuilds()
     }
+
+    parameters {
+        choice(name: 'TF_ACTION', choices: ['apply', 'destroy'],
+               description: 'apply = create/update the AWS infrastructure, destroy = delete it')
+    }
+
     environment {
         // Repository name on Docker Hub; the account (namespace) is taken from the
         // 'docker-hub-repo' credential of the Jenkins running the pipeline.
         IMAGE_REPO = 'tpfoyer'
+        // S3 bucket holding the Terraform state (created once by hand, see step 2).
+        TF_STATE_BUCKET = 'tpfoyer-tfstate-fourat10'
     }
 
     stages {
@@ -38,82 +46,88 @@ pipeline {
             }
         }
 
-        stage('MVN CLEAN') {
-            steps {
-                script {
-                    gv.mavenClean()
+        // Build, test and publish the application: not needed when we only destroy the infrastructure.
+        stage('BUILD, TEST & PUBLISH') {
+            when { expression { params.TF_ACTION != 'destroy' } }
+            stages {
+                stage('MVN CLEAN') {
+                    steps {
+                        script {
+                            gv.mavenClean()
+                        }
+                    }
                 }
-            }
-        }
 
-        stage('UNIT TESTS') {
-            steps {
-                script {
-                    gv.unitTests()
+                stage('UNIT TESTS') {
+                    steps {
+                        script {
+                            gv.unitTests()
+                        }
+                    }
+                    post {
+                        always {
+                            junit(
+                                testResults: 'target/surefire-reports/*.xml',
+                                allowEmptyResults: true
+                            )
+                        }
+                    }
                 }
-            }
-            post {
-                always {
-                    junit(
-                        testResults: 'target/surefire-reports/*.xml',
-                        allowEmptyResults: true
-                    )
-                }
-            }
-        }
 
-        stage('INTEGRATION TESTS') {
-            steps {
-                script {
-                    gv.integrationTests()
+                stage('INTEGRATION TESTS') {
+                    steps {
+                        script {
+                            gv.integrationTests()
+                        }
+                    }
+                    post {
+                        always {
+                            junit(
+                                testResults: 'target/failsafe-reports/*.xml',
+                                allowEmptyResults: true
+                            )
+                        }
+                    }
                 }
-            }
-            post {
-                always {
-                    junit(
-                        testResults: 'target/failsafe-reports/*.xml',
-                        allowEmptyResults: true
-                    )
-                }
-            }
-        }
 
-        stage('ARTIFACT CONSTRUCTION') {
-            steps {
-                script {
-                    gv.buildArtifact()
+                stage('ARTIFACT CONSTRUCTION') {
+                    steps {
+                        script {
+                            gv.buildArtifact()
+                        }
+                    }
                 }
-            }
-        }
 
-        stage('MVN SONARQUBE') {
-            steps {
-                script {
-                    gv.sonarQube()
+                stage('MVN SONARQUBE') {
+                    steps {
+                        script {
+                            gv.sonarQube()
+                        }
+                    }
                 }
-            }
-        }
 
-        stage('PUBLISH TO NEXUS') {
-            steps {
-                script {
-                    gv.publishToNexus()
+                stage('PUBLISH TO NEXUS') {
+                    steps {
+                        script {
+                            gv.publishToNexus()
+                        }
+                    }
                 }
-            }
-        }
 
-        stage('BUILDING OUR IMAGE') {
-            steps {
-                script {
-                    gv.buildImage()
+                stage('BUILDING OUR IMAGE') {
+                    steps {
+                        script {
+                            gv.buildImage()
+                        }
+                    }
                 }
-            }
-        }
 
-        stage('DEPLOY OUR IMAGE') {
-            steps {
-                script {
-                    gv.deployImage()
+                stage('DEPLOY OUR IMAGE') {
+                    steps {
+                        script {
+                            gv.deployImage()
+                        }
+                    }
                 }
             }
         }
@@ -126,6 +140,7 @@ pipeline {
             }
         }
 
+        // Runs "terraform apply" or "terraform destroy" depending on TF_ACTION.
         stage('SETUP TERRAFORM') {
             steps {
                 script {
@@ -134,18 +149,24 @@ pipeline {
             }
         }
 
-        stage('UPDATE KUBECONFIG') {
-            steps {
-                script {
-                    gv.updateKubeconfig()
+        // Connect to the cluster and deploy: impossible once the cluster is destroyed.
+        stage('KUBERNETES') {
+            when { expression { params.TF_ACTION != 'destroy' } }
+            stages {
+                stage('UPDATE KUBECONFIG') {
+                    steps {
+                        script {
+                            gv.updateKubeconfig()
+                        }
+                    }
                 }
-            }
-        }
 
-        stage('DEPLOY TO AWS KUBERNETES') {
-            steps {
-                script {
-                    gv.deployToAwsKubernetes()
+                stage('DEPLOY TO AWS KUBERNETES') {
+                    steps {
+                        script {
+                            gv.deployToAwsKubernetes()
+                        }
+                    }
                 }
             }
         }

@@ -82,14 +82,15 @@ def deployImage() {
     sh 'docker logout'
 }
 
-// Wraps EKS commands: injects the AWS keys from the Jenkins credentials and points kubectl at the kubeconfig.
+// Wraps EKS commands: injects the AWS keys from the Jenkins credentials and points kubectl
+// at the kubeconfig written in step 11 (kept in the workspace of this build).
 def withEks(Closure body) {
     withCredentials([
             string(credentialsId: 'jenkins_aws_access_key_id', variable: 'AWS_ACCESS_KEY_ID'),
             string(credentialsId: 'jenkins_aws_secret_access_key', variable: 'AWS_SECRET_ACCESS_KEY')
     ]) {
         withEnv(['AWS_DEFAULT_REGION=us-west-2',
-                 'KUBECONFIG=/var/jenkins_home/.kube/config']) {
+                 "KUBECONFIG=${env.WORKSPACE}/kubeconfig"]) {
             body()
         }
     }
@@ -100,20 +101,36 @@ def testAwsCredentials() {
     withEks {
         sh 'kubectl version --client'
         sh 'aws-iam-authenticator version'
+        sh 'terraform version'
         sh 'test -n "$AWS_ACCESS_KEY_ID" && echo "AWS access key is set"'
     }
 }
 
+// Step 10: creates or updates the AWS infrastructure described in terraform/ (VPC + EKS cluster + nodes).
+// The state is stored in the S3 bucket TF_STATE_BUCKET, so every build sees the same infrastructure.
+// With TF_ACTION=destroy, everything is deleted instead.
 def setupTerraform() {
-    echo 'Doing step 10: Simulating Terraform infrastructure provisioning...'
+    withEks {
+        dir('terraform') {
+            sh 'terraform init -input=false -backend-config="bucket=$TF_STATE_BUCKET"'
+            if (params.TF_ACTION == 'destroy') {
+                sh 'terraform destroy -input=false -auto-approve -lock-timeout=10m'
+            } else {
+                sh 'terraform plan -input=false -lock-timeout=10m -out=tfplan'
+                sh 'terraform apply -input=false -lock-timeout=10m tfplan'
+            }
+        }
+    }
 }
 
-// Step 11: checks that the kubeconfig exists and points to the EKS cluster.
+// Step 11: writes the kubeconfig of the cluster created by Terraform, then checks the connection.
 def updateKubeconfig() {
     withEks {
-        sh 'test -f "$KUBECONFIG" && echo "kubeconfig found"'
-        sh 'kubectl config get-contexts'
+        dir('terraform') {
+            sh 'terraform output -raw kubeconfig > "$KUBECONFIG"'
+        }
         sh 'kubectl config current-context'
+        sh 'kubectl cluster-info'
     }
 }
 

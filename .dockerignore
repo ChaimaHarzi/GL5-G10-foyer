@@ -17,3 +17,8 @@ pom.xml
 # In target/, keep only the executable jar
 target/*
 !target/*.jar
+
+
+# Infrastructure files: not needed in the image
+terraform
+kubeconfig
