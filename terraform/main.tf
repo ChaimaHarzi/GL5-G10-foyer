@@ -56,10 +56,16 @@ module "eks" {
   subnet_ids = module.vpc.private_subnets
 
   addons = {
-    vpc-cni            = { before_compute = true }
-    kube-proxy         = {}
-    coredns            = {}
-    aws-ebs-csi-driver = {} # creates EBS volumes for PersistentVolumeClaims (MySQL)
+    vpc-cni                = { before_compute = true }
+    eks-pod-identity-agent = { before_compute = true } # gives AWS roles to pods (used by the EBS driver)
+    kube-proxy             = {}
+    coredns                = {}
+    aws-ebs-csi-driver = { # creates EBS volumes for PersistentVolumeClaims (MySQL)
+      pod_identity_association = [{
+        role_arn        = aws_iam_role.ebs_csi.arn
+        service_account = "ebs-csi-controller-sa"
+      }]
+    }
   }
 
   eks_managed_node_groups = {
@@ -68,11 +74,6 @@ module "eks" {
       min_size       = 1
       max_size       = 3
       desired_size   = var.node_count
-
-      # The EBS CSI driver uses the node role to create volumes
-      iam_role_additional_policies = {
-        ebs = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
-      }
     }
   }
 }
