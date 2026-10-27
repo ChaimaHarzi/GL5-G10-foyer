@@ -1,0 +1,77 @@
+# The tpFoyer application: 2 pods behind an AWS load balancer.
+# __IMAGE__ is replaced by Jenkins with the image of the build (e.g. fourat10/tpfoyer:23).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tpfoyer
+  namespace: tpfoyer
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: tpfoyer
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1 # start 1 new pod at a time...
+      maxUnavailable: 0 # ...and never stop an old pod before a new one is ready
+  template:
+    metadata:
+      labels:
+        app: tpfoyer
+    spec:
+      containers:
+        - name: tpfoyer
+          image: __IMAGE__
+          ports:
+            - containerPort: 8082
+          env:
+            - name: DB_URL
+              value: jdbc:mysql://mysql:3306/tpFoyer17?createDatabaseIfNotExist=true&useUnicode=true&serverTimezone=UTC
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-credentials
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-credentials
+                  key: password
+            - name: JAVA_TOOL_OPTIONS
+              value: -XX:MaxRAMPercentage=75.0
+          startupProbe: # gives Spring Boot up to 3 minutes to start
+            httpGet:
+              path: /tpFoyer17/api/universites/getAll
+              port: 8082
+            periodSeconds: 5
+            failureThreshold: 36
+          readinessProbe: # receives traffic only when the API and the database answer
+            httpGet:
+              path: /tpFoyer17/api/universites/getAll
+              port: 8082
+            periodSeconds: 10
+          livenessProbe: # restarted if the process stops answering
+            tcpSocket:
+              port: 8082
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              memory: 768Mi
+---
+# Public entry point: AWS creates a load balancer forwarding port 80 to the pods' port 8082
+apiVersion: v1
+kind: Service
+metadata:
+  name: tpfoyer
+  namespace: tpfoyer
+spec:
+  type: LoadBalancer
+  selector:
+    app: tpfoyer
+  ports:
+    - port: 80
+      targetPort: 8082
