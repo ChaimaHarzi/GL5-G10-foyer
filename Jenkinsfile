@@ -25,6 +25,8 @@ pipeline {
         IMAGE_REPO = 'tpfoyer'
         // S3 bucket holding the Terraform state (created once by hand, see step 2).
         TF_STATE_BUCKET = 'tpfoyer-tfstate-fourat10'
+        // Who receives the build notifications (success and failure).
+        NOTIFY_EMAIL = 'fouratmarouen4@gmail.com'
     }
 
     stages {
@@ -175,9 +177,48 @@ pipeline {
     post {
         success {
             echo 'Pipeline completed successfully!'
+            emailext(
+                to: env.NOTIFY_EMAIL,
+                subject: "SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER} (${params.TF_ACTION ?: 'apply'})",
+                mimeType: 'text/html',
+                body: """
+                    <h2 style="color:#2e7d32">Build #${env.BUILD_NUMBER} succeeded</h2>
+                    <p>
+                      <b>Job:</b> ${env.JOB_NAME}<br>
+                      <b>Action:</b> ${params.TF_ACTION ?: 'apply'}<br>
+                      <b>Docker image:</b> ${params.TF_ACTION == 'destroy' ? '-' : env.IMAGE_NAME + ':' + env.BUILD_NUMBER}<br>
+                      <b>Duration:</b> ${currentBuild.durationString}
+                    </p>
+                    <p>
+                      <a href="${env.BUILD_URL}">Open the build</a> |
+                      <a href="${env.BUILD_URL}console">Console output</a> |
+                      <a href="http://localhost:9000/dashboard?id=tpFoyer-17">SonarQube</a>
+                    </p>
+                """
+            )
         }
         failure {
             echo 'Pipeline failed. Check the logs of the failed stage.'
+            emailext(
+                to: env.NOTIFY_EMAIL,
+                subject: "FAILURE: ${env.JOB_NAME} #${env.BUILD_NUMBER} (${params.TF_ACTION ?: 'apply'})",
+                mimeType: 'text/html',
+                attachLog: true,
+                compressLog: true,
+                body: """
+                    <h2 style="color:#c62828">Build #${env.BUILD_NUMBER} failed</h2>
+                    <p>
+                      <b>Job:</b> ${env.JOB_NAME}<br>
+                      <b>Action:</b> ${params.TF_ACTION ?: 'apply'}<br>
+                      <b>Duration:</b> ${currentBuild.durationString}
+                    </p>
+                    <p>The full build log is attached (build.log.gz).</p>
+                    <p>
+                      <a href="${env.BUILD_URL}">Open the build</a> |
+                      <a href="${env.BUILD_URL}console">Console output</a>
+                    </p>
+                """
+            )
         }
         always {
             echo 'Pipeline execution finished.'
