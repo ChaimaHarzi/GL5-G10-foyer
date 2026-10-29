@@ -26,7 +26,7 @@ pipeline {
         // S3 bucket holding the Terraform state (created once by hand, see step 2).
         TF_STATE_BUCKET = 'tpfoyer-tfstate-fourat10'
         // Who receives the build notifications (success and failure).
-        NOTIFY_EMAIL = 'fouratmarouen4@gmail.com'
+        NOTIFY_EMAIL = 'fouratmarouen0@gmail.com'
     }
 
     stages {
