@@ -38,7 +38,16 @@ public class ReservationService implements IReservationService{
 
     @Override
     public Reservation getReservationById(String idReservation) {
-        return reservationRepository.findById(idReservation).get();
+        return reservationRepository.findById(idReservation)
+                .orElseThrow(() -> new NoSuchElementException("Reservation introuvable : " + idReservation));
+    }
+
+    private Etudiant getEtudiantByCin(long cinEtudiant) {
+        Etudiant etudiant = etudiantRepository.findByCinEtudiant(cinEtudiant);
+        if (etudiant == null) {
+            throw new NoSuchElementException("Etudiant introuvable : CIN " + cinEtudiant);
+        }
+        return etudiant;
     }
 
     @Override
@@ -56,9 +65,11 @@ public class ReservationService implements IReservationService{
     @Transactional
     public Reservation ajouterReservation(long idBloc, long cinEtudiant) {
 
-        if (reservationRepository.findForReservation(idBloc) != null) {
-            Reservation reservation = reservationRepository.findForReservation(idBloc);
-            reservation.getEtudiants().add(etudiantRepository.findByCinEtudiant(cinEtudiant));
+        Etudiant etudiant = getEtudiantByCin(cinEtudiant);
+        Reservation existante = reservationRepository.findForReservation(idBloc);
+        if (existante != null) {
+            Reservation reservation = existante;
+            reservation.getEtudiants().add(etudiant);
             Chambre chambre = chambreRepository.findByReservationsIdReservation(reservation.getIdReservation());
             switch (chambre.getTypeChambre()) {
                 case TRIPLE:
@@ -73,13 +84,14 @@ public class ReservationService implements IReservationService{
             return reservationRepository.save(reservation);
         } else {
             Set<Etudiant> etudiants = new HashSet<>();
-            etudiants.add(etudiantRepository.findByCinEtudiant(cinEtudiant));
+            etudiants.add(etudiant);
             Reservation reservation = Reservation.builder().anneeUniversitaire(new Date()).etudiants(etudiants).build();
             Chambre chambre = chambreRepository.getForReservation(idBloc);
             if (chambre == null) {
                 throw new IllegalStateException("Aucune chambre disponible dans le bloc " + idBloc);
             }
-            Bloc bloc =blocRepository.findById(idBloc).get();
+            Bloc bloc =blocRepository.findById(idBloc)
+                    .orElseThrow(() -> new NoSuchElementException("Bloc introuvable : " + idBloc));
             Calendar calendar = Calendar.getInstance();
             calendar.setTime(new Date());
             String idReservation = chambre.getIdChambre()+bloc.getNomBloc()+calendar.get(Calendar.YEAR);
@@ -106,8 +118,11 @@ public class ReservationService implements IReservationService{
 
     @Override
     public Reservation annulerReservation(long cinEtudiant) {
+        Etudiant etudiant = getEtudiantByCin(cinEtudiant);
         Reservation reservation = reservationRepository.findByEtudiantsCinEtudiantAndAnneeUniversitaire(cinEtudiant, Year.now().getValue());
-        Etudiant etudiant = etudiantRepository.findByCinEtudiant(cinEtudiant);
+        if (reservation == null) {
+            throw new NoSuchElementException("Aucune reservation cette annee pour l'etudiant CIN " + cinEtudiant);
+        }
         reservation.getEtudiants().remove(etudiant);
         reservation.setEstValide(true);
         return reservationRepository.save(reservation);

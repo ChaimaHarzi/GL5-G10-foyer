@@ -205,12 +205,33 @@ class ReservationServiceMockitoTest {
 
     @Test
     void ajouterReservation_noFreeRoomInBloc_throwsClearException() {
+        when(etudiantRepository.findByCinEtudiant(111L)).thenReturn(Etudiant.builder().cinEtudiant(111).build());
         when(reservationRepository.findForReservation(1L)).thenReturn(null);
         when(chambreRepository.getForReservation(1L)).thenReturn(null);
 
         IllegalStateException e = assertThrows(IllegalStateException.class,
                 () -> reservationService.ajouterReservation(1L, 111L));
         assertTrue(e.getMessage().contains("Aucune chambre disponible"));
+        verify(reservationRepository, never()).save(any());
+    }
+
+    @Test
+    void ajouterReservation_unknownCin_throwsNotFound() {
+        when(etudiantRepository.findByCinEtudiant(999L)).thenReturn(null);
+
+        NoSuchElementException e = assertThrows(NoSuchElementException.class,
+                () -> reservationService.ajouterReservation(1L, 999L));
+        assertTrue(e.getMessage().contains("999"));
+        verify(reservationRepository, never()).save(any());
+    }
+
+    @Test
+    void annulerReservation_noReservationThisYear_throwsNotFound() {
+        when(etudiantRepository.findByCinEtudiant(111L)).thenReturn(Etudiant.builder().cinEtudiant(111).build());
+        when(reservationRepository.findByEtudiantsCinEtudiantAndAnneeUniversitaire(111L, Year.now().getValue()))
+                .thenReturn(null);
+
+        assertThrows(NoSuchElementException.class, () -> reservationService.annulerReservation(111L));
         verify(reservationRepository, never()).save(any());
     }
 

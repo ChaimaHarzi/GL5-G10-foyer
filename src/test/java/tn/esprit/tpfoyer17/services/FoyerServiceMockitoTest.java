@@ -109,11 +109,12 @@ class FoyerServiceMockitoTest {
     @Test
     void ajouterFoyerEtAffecterAUniversite_unknownUniversite_throwsException() {
         Foyer foyer = Foyer.builder().nomFoyer("Foyer A").build();
-        when(foyerRepository.save(foyer)).thenReturn(foyer);
         when(universiteRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThrows(NoSuchElementException.class,
                 () -> foyerService.ajouterFoyerEtAffecterAUniversite(foyer, 99L));
         verify(universiteRepository, never()).save(any());
+        // the foyer is not saved either: no orphan foyer left in the database
+        verify(foyerRepository, never()).save(any());
     }
 }

@@ -9,6 +9,7 @@ import tn.esprit.tpfoyer17.entities.Etudiant;
 import tn.esprit.tpfoyer17.repositories.EtudiantRepository;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 
 @Service
 @AllArgsConstructor
@@ -29,7 +30,8 @@ public class EtudiantService implements IEtudiantService{
     }
     @Override
     public Etudiant getEtudiantById(long idEtudiant) {
-        return etudiantRepository.findById(idEtudiant).get();
+        return etudiantRepository.findById(idEtudiant)
+                .orElseThrow(() -> new NoSuchElementException("Etudiant introuvable : " + idEtudiant));
     }
     @Override
     public void deleteEtudiant(long idEtudiant) {
