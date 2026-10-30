@@ -114,7 +114,7 @@ def testAwsCredentials() {
 def setupTerraform() {
     withEks {
         dir('terraform') {
-            sh 'terraform init -input=false -backend-config="bucket=$TF_STATE_BUCKET"'
+            sh 'terraform init -input=false -reconfigure -backend-config="bucket=$TF_STATE_BUCKET"'
             if (params.TF_ACTION == 'destroy') {
                 // The load balancer and the MySQL disk are created by Kubernetes, not by Terraform:
                 // delete the application first, so AWS removes them before Terraform deletes the network.
