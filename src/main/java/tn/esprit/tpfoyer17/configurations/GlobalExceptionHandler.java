@@ -20,6 +20,12 @@ public class GlobalExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
     }
 
+    // Invalid request sent by the client (e.g. missing id for an update)
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ProblemDetail badRequest(IllegalArgumentException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
     // Request valid but impossible in the current state (e.g. no free room left in the bloc)
     @ExceptionHandler(IllegalStateException.class)
     public ProblemDetail conflict(IllegalStateException e) {

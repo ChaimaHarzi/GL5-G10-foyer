@@ -8,7 +8,7 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 import java.io.Serializable;
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.Set;
 
 @Entity
@@ -32,7 +32,7 @@ public class Etudiant implements Serializable {
 
     long cinEtudiant;
 
-    Date dateNaissance;
+    LocalDate dateNaissance;
 
     // Not serialized: Reservation.etudiants already links both sides, serializing this
     // back-reference too makes Jackson loop forever (Reservation -> Etudiant -> Reservation...)
