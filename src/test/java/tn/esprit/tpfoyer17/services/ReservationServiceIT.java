@@ -138,7 +138,8 @@ class ReservationServiceIT {
 
         Reservation first = reservationService.ajouterReservation(bloc.getIdBloc(), 111);
 
-        assertThrows(IllegalStateException.class, () -> reservationService.ajouterReservation(bloc.getIdBloc(), 111));
+        long idBloc = bloc.getIdBloc();
+        assertThrows(IllegalStateException.class, () -> reservationService.ajouterReservation(idBloc, 111));
         assertEquals(1, reservationService.getReservationById(first.getIdReservation()).getEtudiants().size());
     }
 

@@ -31,7 +31,7 @@ class JsonSerializationTest {
     }
 
     @Test
-    void reservationWithEtudiant_isSerializedWithoutInfiniteRecursion() throws Exception {
+    void reservationWithEtudiant_isSerializedWithoutInfiniteRecursion() {
         String json = assertDoesNotThrow(() -> objectMapper.writeValueAsString(reservationAvecEtudiant()));
 
         assertTrue(json.contains("\"idReservation\":\"5A2026\""));

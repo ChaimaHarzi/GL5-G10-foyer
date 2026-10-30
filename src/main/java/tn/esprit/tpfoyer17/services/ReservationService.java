@@ -17,6 +17,7 @@ import tn.esprit.tpfoyer17.repositories.EtudiantRepository;
 import tn.esprit.tpfoyer17.repositories.ReservationRepository;
 
 import java.time.Year;
+import java.time.ZoneId;
 import java.util.*;
 
 @Service
@@ -67,7 +68,7 @@ public class ReservationService implements IReservationService{
 
         Etudiant etudiant = getEtudiantByCin(cinEtudiant);
         // One reservation per student and per year
-        if (reservationRepository.findByEtudiantsCinEtudiantAndAnneeUniversitaire(cinEtudiant, Year.now().getValue()) != null) {
+        if (reservationRepository.findByEtudiantsCinEtudiantAndAnneeUniversitaire(cinEtudiant, Year.now(ZoneId.systemDefault()).getValue()) != null) {
             throw new IllegalStateException("L'etudiant CIN " + cinEtudiant + " a deja une reservation cette annee");
         }
         Reservation existante = reservationRepository.findForReservation(idBloc);
@@ -123,7 +124,7 @@ public class ReservationService implements IReservationService{
     @Override
     public Reservation annulerReservation(long cinEtudiant) {
         Etudiant etudiant = getEtudiantByCin(cinEtudiant);
-        Reservation reservation = reservationRepository.findByEtudiantsCinEtudiantAndAnneeUniversitaire(cinEtudiant, Year.now().getValue());
+        Reservation reservation = reservationRepository.findByEtudiantsCinEtudiantAndAnneeUniversitaire(cinEtudiant, Year.now(ZoneId.systemDefault()).getValue());
         if (reservation == null) {
             throw new NoSuchElementException("Aucune reservation cette annee pour l'etudiant CIN " + cinEtudiant);
         }
