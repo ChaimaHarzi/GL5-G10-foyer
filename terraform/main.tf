@@ -13,11 +13,17 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
+# AWS Academy Learner Lab: IAM roles cannot be created and iam:GetRole is denied,
+# so the cluster and the nodes use the existing "LabRole". Its ARN is built from
+# the account id (sts:GetCallerIdentity is always allowed).
+data "aws_caller_identity" "current" {}
+
 locals {
-  azs = slice(data.aws_availability_zones.available.names, 0, 2)
+  azs          = slice(data.aws_availability_zones.available.names, 0, 2)
+  lab_role_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/LabRole"
 }
 
-# Network: 2 public subnets (load balancers, NAT) + 2 private subnets (n    odes)
+# Network: 2 public subnets (load balancers, NAT) + 2 private subnets (nodes)
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "~> 6.7"
@@ -37,43 +43,70 @@ module "vpc" {
   private_subnet_tags = { "kubernetes.io/role/internal-elb" = 1 }
 }
 
-# EKS cluster + one managed node group
-module "eks" {
-  source  = "terraform-aws-modules/eks/aws"
-  version = "~> 21.29"
+# EKS cluster (control plane managed by AWS)
+resource "aws_eks_cluster" "this" {
+  name     = var.cluster_name
+  version  = var.kubernetes_version
+  role_arn = local.lab_role_arn
 
-  name               = var.cluster_name
-  kubernetes_version = var.kubernetes_version
-
-  endpoint_public_access                   = true # Jenkins runs outside AWS
-  enable_cluster_creator_admin_permissions = true # the AWS user of Jenkins becomes cluster admin
-
-  # No customer KMS key (it costs money and blocks re-creation for 30 days after a destroy)
-  create_kms_key    = false
-  encryption_config = null
-
-  vpc_id     = module.vpc.vpc_id
-  subnet_ids = module.vpc.private_subnets
-
-  addons = {
-    vpc-cni                = { before_compute = true }
-    eks-pod-identity-agent = { before_compute = true } # gives AWS roles to pods (used by the EBS driver)
-    kube-proxy             = {}
-    coredns                = {}
-    aws-ebs-csi-driver = { # creates EBS volumes for PersistentVolumeClaims (MySQL)
-      pod_identity_association = [{
-        role_arn        = aws_iam_role.ebs_csi.arn
-        service_account = "ebs-csi-controller-sa"
-      }]
-    }
+  vpc_config {
+    subnet_ids              = module.vpc.private_subnets
+    endpoint_public_access  = true # Jenkins runs outside AWS
+    endpoint_private_access = true # the nodes reach the API inside the VPC
   }
 
-  eks_managed_node_groups = {
-    default = {
-      instance_types = [var.node_instance_type]
-      min_size       = 1
-      max_size       = 3
-      desired_size   = var.node_count
-    }
+  access_config {
+    authentication_mode                         = "API_AND_CONFIG_MAP"
+    bootstrap_cluster_creator_admin_permissions = true # the AWS role of Jenkins becomes cluster admin
   }
+}
+
+# Network add-ons: needed before the nodes can become ready
+resource "aws_eks_addon" "before_nodes" {
+  for_each     = toset(["vpc-cni", "kube-proxy"])
+  cluster_name = aws_eks_cluster.this.name
+  addon_name   = each.key
+}
+
+# Lets pods read the node role through the instance metadata (hop limit 2):
+# the EBS CSI driver has no role of its own, so it uses LabRole through the node.
+resource "aws_launch_template" "node" {
+  name_prefix = "${var.cluster_name}-node-"
+
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 2
+  }
+}
+
+# Worker nodes (EC2) in the private subnets
+resource "aws_eks_node_group" "default" {
+  cluster_name    = aws_eks_cluster.this.name
+  node_group_name = "default"
+  node_role_arn   = local.lab_role_arn
+  subnet_ids      = module.vpc.private_subnets
+  instance_types  = [var.node_instance_type]
+
+  scaling_config {
+    min_size     = 1
+    max_size     = 3
+    desired_size = var.node_count
+  }
+
+  launch_template {
+    id      = aws_launch_template.node.id
+    version = aws_launch_template.node.latest_version
+  }
+
+  depends_on = [aws_eks_addon.before_nodes]
+}
+
+# Add-ons that run as pods, so they wait for the nodes
+resource "aws_eks_addon" "after_nodes" {
+  for_each     = toset(["coredns", "aws-ebs-csi-driver"]) # EBS driver: disks for PersistentVolumeClaims (MySQL)
+  cluster_name = aws_eks_cluster.this.name
+  addon_name   = each.key
+
+  depends_on = [aws_eks_node_group.default]
 }
