@@ -37,7 +37,7 @@ public class ReservationService implements IReservationService{
 
     @Override
     public Reservation getReservationById(String idReservation) {
-        return reservationRepository.findById(idReservation).get();
+        return reservationRepository.findById(idReservation).orElseThrow();
     }
 
     @Override
@@ -74,7 +74,7 @@ public class ReservationService implements IReservationService{
             etudiants.add(etudiantRepository.findByCinEtudiant(cinEtudiant));
             Reservation reservation = Reservation.builder().anneeUniversitaire(new Date()).etudiants(etudiants).build();
             Chambre chambre = chambreRepository.getForReservation(idBloc);
-            Bloc bloc =blocRepository.findById(idBloc).get();
+            Bloc bloc =blocRepository.findById(idBloc).orElseThrow();
             Calendar calendar = Calendar.getInstance();
             calendar.setTime(new Date());
             String idReservation = chambre.getIdChambre()+bloc.getNomBloc()+calendar.get(Calendar.YEAR);

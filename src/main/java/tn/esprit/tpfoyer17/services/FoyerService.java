@@ -32,7 +32,7 @@ public class FoyerService implements IFoyerService{
     }
     @Override
     public Foyer getFoyerById(long idFoyer) {
-        return foyerRepository.findById(idFoyer).get();
+        return foyerRepository.findById(idFoyer).orElseThrow();
     }
     @Override
     public void deleteFoyer(long idFoyer) {
@@ -46,7 +46,7 @@ public class FoyerService implements IFoyerService{
     @Override
     public Foyer ajouterFoyerEtAffecterAUniversite(Foyer foyer, long idUniversite) {
         Foyer foyer1 = foyerRepository.save(foyer);
-        Universite universite = universiteRepository.findById(idUniversite).get();
+        Universite universite = universiteRepository.findById(idUniversite).orElseThrow();
         universite.setFoyer(foyer1);
         universiteRepository.save(universite);
         return foyer1 ;
