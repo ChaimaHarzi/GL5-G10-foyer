@@ -3,6 +3,7 @@ package tn.esprit.tpfoyer17.services;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import tn.esprit.tpfoyer17.entities.Bloc;
 import tn.esprit.tpfoyer17.entities.Chambre;
@@ -77,5 +78,27 @@ class BlocServiceIT {
 
         assertEquals(bloc.getIdBloc(), chambreRepository.findById(c1.getIdChambre()).get().getBloc().getIdBloc());
         assertEquals(bloc.getIdBloc(), chambreRepository.findById(c2.getIdChambre()).get().getBloc().getIdBloc());
+    }
+
+    /**
+     * Same scenario without a test transaction, like a real REST call: the test above passes
+     * even if the chambres are never saved, because the test transaction flushes them anyway.
+     * Nothing is rolled back here, so the created rows are deleted at the end.
+     */
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void affecterChambresABloc_withoutTransaction_persistsTheLink() {
+        Bloc bloc = blocService.addBloc(Bloc.builder().nomBloc("A").build());
+        Chambre c1 = chambreRepository.save(Chambre.builder().numeroChambre(101).build());
+        Chambre c2 = chambreRepository.save(Chambre.builder().numeroChambre(102).build());
+        try {
+            blocService.affecterChambresABloc(List.of(c1.getIdChambre(), c2.getIdChambre()), bloc.getIdBloc());
+
+            assertNotNull(chambreRepository.findById(c1.getIdChambre()).get().getBloc());
+            assertNotNull(chambreRepository.findById(c2.getIdChambre()).get().getBloc());
+        } finally {
+            chambreRepository.deleteAll(List.of(c1, c2));
+            blocService.deleteBloc(bloc.getIdBloc());
+        }
     }
 }

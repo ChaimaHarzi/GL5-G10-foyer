@@ -50,8 +50,10 @@ public class BlocService implements IBlocService{
         List<Chambre> chambres = (List<Chambre>) chambreRepository.findAllById(numChambre);
         for (Chambre chambre: chambres) {
             chambre.setBloc(bloc);
-            blocRepository.save(bloc);
         }
+        // Chambre owns the relation (Bloc.chambres is mappedBy): saving the bloc does not
+        // store the link, the chambres themselves must be saved.
+        chambreRepository.saveAll(chambres);
         return bloc;
     }
 
