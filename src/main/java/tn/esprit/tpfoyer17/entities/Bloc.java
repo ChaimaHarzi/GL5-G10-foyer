@@ -3,7 +3,6 @@ package tn.esprit.tpfoyer17.entities;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-import lombok.extern.slf4j.Slf4j;
 
 import java.io.Serializable;
 import java.util.Set;
