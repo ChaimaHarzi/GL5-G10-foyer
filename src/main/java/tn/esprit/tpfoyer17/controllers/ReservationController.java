@@ -35,10 +35,8 @@ public class ReservationController {
         reservationService.deleteReservation(idReservation);
     }
 
-    @PutMapping("update")
-    public Reservation updatingReservation(@RequestBody Reservation reservation){
-        return reservationService.updateReservation(reservation);
-    }
+    // No "update" route: a reservation (its students and estValide) is only changed through
+    // ajouter-reservation and annuler-reservation, which apply the business rules.
 
     @PutMapping("ajouter-reservation")
     public Reservation ajouterReservation (@RequestParam("idChambre") long idChambre, @RequestParam("cinEtudiant") long cinEtudiant){
