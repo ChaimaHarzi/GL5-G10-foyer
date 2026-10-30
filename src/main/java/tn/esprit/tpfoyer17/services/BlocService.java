@@ -33,7 +33,7 @@ public class BlocService implements IBlocService{
     }
     @Override
     public Bloc getBlocById(long idBloc) {
-        return blocRepository.findById(idBloc).get();
+        return blocRepository.findById(idBloc).orElseThrow();
     }
     @Override
     public void deleteBloc(long idBloc) {
@@ -46,7 +46,7 @@ public class BlocService implements IBlocService{
 
     @Override
     public Bloc affecterChambresABloc(List<Long> numChambre, long idBloc) {
-        Bloc bloc = blocRepository.findById(idBloc).get();
+        Bloc bloc = blocRepository.findById(idBloc).orElseThrow();
         List<Chambre> chambres = (List<Chambre>) chambreRepository.findAllById(numChambre);
         for (Chambre chambre: chambres) {
             chambre.setBloc(bloc);

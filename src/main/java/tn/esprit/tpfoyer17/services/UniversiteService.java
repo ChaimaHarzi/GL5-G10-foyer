@@ -31,7 +31,7 @@ public class UniversiteService implements IUniversiteService{
 
     @Override
     public Universite getUniversiteById(long idUniversite) {
-        return universiteRepository.findById(idUniversite).get();
+        return universiteRepository.findById(idUniversite).orElseThrow();
     }
 
     @Override
@@ -48,13 +48,13 @@ public class UniversiteService implements IUniversiteService{
     @Override
     public Universite affecterFoyerAUniversite(long idFoyer, String nomUniversite) {
         Universite universite = universiteRepository.findByNomUniversite(nomUniversite);
-        universite.setFoyer(foyerRepository.findById(idFoyer).get());
+        universite.setFoyer(foyerRepository.findById(idFoyer).orElseThrow());
         return universiteRepository.save(universite);
     }
 
     @Override
     public Universite desaffecterFoyerAUniversite(long idUniversite) {
-        Universite universite = universiteRepository.findById(idUniversite).get();
+        Universite universite = universiteRepository.findById(idUniversite).orElseThrow();
         universite.setFoyer(null);
         return universiteRepository.save(universite);
     }

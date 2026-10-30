@@ -35,5 +35,5 @@ public class Foyer implements Serializable {
     @JsonIgnore
     @ToString.Exclude
     @OneToMany(mappedBy = "foyer",cascade = CascadeType.ALL)
-    Set<Bloc> blocs;
+    private Set<Bloc> blocs;
 }
