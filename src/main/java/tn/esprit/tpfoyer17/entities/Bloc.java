@@ -32,5 +32,5 @@ public class Bloc implements Serializable {
 
     @ToString.Exclude
     @OneToMany(mappedBy = "bloc")
-    Set<Chambre> chambres;
+    private Set<Chambre> chambres;
 }

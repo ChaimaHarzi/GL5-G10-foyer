@@ -33,6 +33,6 @@ public class Etudiant implements Serializable {
 
     @ToString.Exclude
     @ManyToMany(mappedBy = "etudiants")
-    Set<Reservation> reservations;
+    private Set<Reservation> reservations;
 
 }
