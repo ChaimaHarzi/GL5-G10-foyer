@@ -27,7 +27,9 @@ class BlocServiceIT {
 
     @Autowired
     ChambreRepository chambreRepository;
-
+/**
+ * Test the addBloc method.
+ */
     @Test
     void addBloc_persistsBlocWithGeneratedId() {
         Bloc saved = blocService.addBloc(Bloc.builder().nomBloc("A").capaciteBloc(100).build());

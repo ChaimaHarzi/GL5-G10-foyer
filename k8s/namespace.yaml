@@ -1,0 +1,5 @@
+# All the application objects live in their own namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tpfoyer

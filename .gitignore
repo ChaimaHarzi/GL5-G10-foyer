@@ -44,3 +44,10 @@ logs/
 ### Secrets / env ###
 .env
 *.env
+
+### Terraform ###
+.terraform/
+*.tfstate
+*.tfstate.*
+tfplan
+kubeconfig

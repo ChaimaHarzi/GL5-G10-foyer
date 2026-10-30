@@ -82,20 +82,104 @@ def deployImage() {
     sh 'docker logout'
 }
 
+// Wraps EKS commands: injects the AWS keys from the Jenkins credentials and points kubectl
+// at the kubeconfig written in step 11 (kept in the workspace of this build).
+def withEks(Closure body) {
+    withCredentials([
+            string(credentialsId: 'jenkins_aws_access_key_id', variable: 'AWS_ACCESS_KEY_ID'),
+            string(credentialsId: 'jenkins_aws_secret_access_key', variable: 'AWS_SECRET_ACCESS_KEY'),
+            string(credentialsId: 'jenkins_aws_session_token', variable: 'AWS_SESSION_TOKEN')
+
+    ]) {
+        withEnv(['AWS_DEFAULT_REGION=us-west-2',
+                 "KUBECONFIG=${env.WORKSPACE}/kubeconfig"]) {
+            body()
+        }
+    }
+}
+
+// Step 9: checks that the tools exist and the credentials are injected (values stay masked).
 def testAwsCredentials() {
-    echo 'Doing step 9: Simulating AWS credentials validation...'
+    withEks {
+        sh 'kubectl version --client'
+        sh 'aws-iam-authenticator version'
+        sh 'terraform version'
+        sh 'test -n "$AWS_ACCESS_KEY_ID" && echo "AWS access key is set"'
+    }
 }
 
+// Step 10: creates or updates the AWS infrastructure described in terraform/ (VPC + EKS cluster + nodes).
+// The state is stored in the S3 bucket TF_STATE_BUCKET, so every build sees the same infrastructure.
+// With TF_ACTION=destroy, everything is deleted instead.
 def setupTerraform() {
-    echo 'Doing step 10: Simulating Terraform infrastructure provisioning...'
+    withEks {
+        dir('terraform') {
+            sh 'terraform init -input=false -backend-config="bucket=$TF_STATE_BUCKET"'
+            if (params.TF_ACTION == 'destroy') {
+                // The load balancer and the MySQL disk are created by Kubernetes, not by Terraform:
+                // delete the application first, so AWS removes them before Terraform deletes the network.
+                sh '''
+                    if terraform output -raw kubeconfig > "$KUBECONFIG" 2>/dev/null; then
+                      kubectl delete namespace tpfoyer --ignore-not-found --timeout=10m
+                      kubectl wait --for=delete pv --all --timeout=5m || true
+                    fi
+                '''
+                sh 'terraform destroy -input=false -auto-approve -lock-timeout=10m'
+            } else {
+                sh 'terraform plan -input=false -lock-timeout=10m -out=tfplan'
+                sh 'terraform apply -input=false -lock-timeout=10m tfplan'
+            }
+        }
+    }
 }
 
+// Step 11: writes the kubeconfig of the cluster created by Terraform, then checks the connection.
 def updateKubeconfig() {
-    echo 'Doing step 11: Simulating Kubernetes kubeconfig update...'
+    withEks {
+        dir('terraform') {
+            sh 'terraform output -raw kubeconfig > "$KUBECONFIG"'
+        }
+        sh 'kubectl config current-context'
+        sh 'kubectl cluster-info'
+    }
 }
 
+// Step 12: deploys MySQL and the application on EKS, then waits until the new version is running.
+// Each build deploys its own image tag, which makes Kubernetes perform a rolling update.
 def deployToAwsKubernetes() {
-    echo 'Doing step 12: Simulating deployment to AWS Kubernetes...'
+    withEks {
+        sh 'kubectl apply -f k8s/namespace.yaml -f k8s/storageclass.yaml'
+
+        // MySQL user and password from the 'mysql-creds' Jenkins credential, stored in a Kubernetes Secret (never in git)
+        withCredentials([usernamePassword(credentialsId: 'mysql-creds',
+                usernameVariable: 'DB_USERNAME',
+                passwordVariable: 'DB_PASSWORD')]) {
+            sh '''
+                kubectl -n tpfoyer create secret generic mysql-credentials \
+                  --from-literal=username="$DB_USERNAME" \
+                  --from-literal=password="$DB_PASSWORD" \
+                  --dry-run=client -o yaml | kubectl apply -f -
+            '''
+        }
+
+        sh 'kubectl apply -f k8s/mysql.yaml'
+        sh 'kubectl -n tpfoyer rollout status statefulset/mysql --timeout=5m'
+
+        // __IMAGE__ in app.yaml becomes the image pushed by this build, e.g. fourat10/tpfoyer:23
+        sh "sed 's|__IMAGE__|${env.IMAGE_NAME}:${env.BUILD_NUMBER}|' k8s/app.yaml | kubectl apply -f -"
+        sh 'kubectl -n tpfoyer rollout status deployment/tpfoyer --timeout=10m'
+
+        sh 'kubectl -n tpfoyer get pods,svc'
+        // The AWS load balancer gets its public address a few seconds after the Service is created
+        sh '''
+            for i in $(seq 1 30); do
+              HOST=$(kubectl -n tpfoyer get svc tpfoyer -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+              [ -n "$HOST" ] && break
+              sleep 10
+            done
+            echo "Application: http://$HOST/tpFoyer17/swagger-ui/index.html"
+        '''
+    }
 }
 
 return this
