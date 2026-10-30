@@ -203,6 +203,17 @@ class ReservationServiceMockitoTest {
         verify(chambreRepository).save(chambre);
     }
 
+    @Test
+    void ajouterReservation_noFreeRoomInBloc_throwsClearException() {
+        when(reservationRepository.findForReservation(1L)).thenReturn(null);
+        when(chambreRepository.getForReservation(1L)).thenReturn(null);
+
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                () -> reservationService.ajouterReservation(1L, 111L));
+        assertTrue(e.getMessage().contains("Aucune chambre disponible"));
+        verify(reservationRepository, never()).save(any());
+    }
+
     // ---------- annulerReservation ----------
 
     @Test

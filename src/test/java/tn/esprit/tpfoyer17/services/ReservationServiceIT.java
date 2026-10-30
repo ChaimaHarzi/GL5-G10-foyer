@@ -115,16 +115,10 @@ class ReservationServiceIT {
     void ajouterReservation_twoEtudiantsInDoubleRoom_shareTheSameReservation() {
         etudiant(111);
         etudiant(222);
-        // Reservation from last year: the room is free this year
-        Reservation old = reservationRepository.save(Reservation.builder()
-                .idReservation("OLD")
-                .anneeUniversitaire(new Date(System.currentTimeMillis() - 400L * 24 * 3600 * 1000))
-                .estValide(false)
-                .build());
+        // A room that was never reserved: the first reservation must work on an empty database
         Bloc bloc = blocRepository.save(Bloc.builder().nomBloc("A").build());
         chambreRepository.save(Chambre.builder()
                 .numeroChambre(101).typeChambre(TypeChambre.DOUBLE).bloc(bloc)
-                .reservations(new HashSet<>(Set.of(old)))
                 .build());
 
         Reservation first = reservationService.ajouterReservation(bloc.getIdBloc(), 111);

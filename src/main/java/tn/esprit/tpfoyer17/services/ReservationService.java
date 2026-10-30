@@ -76,6 +76,9 @@ public class ReservationService implements IReservationService{
             etudiants.add(etudiantRepository.findByCinEtudiant(cinEtudiant));
             Reservation reservation = Reservation.builder().anneeUniversitaire(new Date()).etudiants(etudiants).build();
             Chambre chambre = chambreRepository.getForReservation(idBloc);
+            if (chambre == null) {
+                throw new IllegalStateException("Aucune chambre disponible dans le bloc " + idBloc);
+            }
             Bloc bloc =blocRepository.findById(idBloc).get();
             Calendar calendar = Calendar.getInstance();
             calendar.setTime(new Date());
