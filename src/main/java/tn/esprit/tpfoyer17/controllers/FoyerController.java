@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+import tn.esprit.tpfoyer17.dto.FoyerRequest;
 import tn.esprit.tpfoyer17.entities.Foyer;
 import tn.esprit.tpfoyer17.services.IFoyerService;
 
@@ -19,8 +20,8 @@ public class FoyerController {
     IFoyerService foyerService;
 
     @PostMapping("add")
-    public Foyer addingFoyer(@RequestBody Foyer foyer){
-        return foyerService.addFoyer(foyer);
+    public Foyer addingFoyer(@RequestBody FoyerRequest request){
+        return foyerService.addFoyer(request.toEntity());
     }
     @GetMapping("getAll")
     public List<Foyer> gettingAllFoyer(){
@@ -38,12 +39,14 @@ public class FoyerController {
     }
 
     @PutMapping("update")
-    public Foyer updatingFoyer(@RequestBody Foyer foyer){
+    public Foyer updatingFoyer(@RequestBody FoyerRequest request){
+        Foyer foyer = foyerService.getFoyerById(request.idFoyer());
+        request.applyTo(foyer);
         return foyerService.updateFoyer(foyer);
     }
     @PostMapping("ajouter-affecter")
-    Foyer ajouterFoyerEtAffecterAUniversite (@RequestBody Foyer foyer, @RequestParam("idUniversite") long idUniversite){
-        return foyerService.ajouterFoyerEtAffecterAUniversite(foyer,idUniversite);
+    Foyer ajouterFoyerEtAffecterAUniversite (@RequestBody FoyerRequest request, @RequestParam("idUniversite") long idUniversite){
+        return foyerService.ajouterFoyerEtAffecterAUniversite(request.toEntity(),idUniversite);
     }
 
 }

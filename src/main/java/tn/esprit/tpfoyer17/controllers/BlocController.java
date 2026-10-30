@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+import tn.esprit.tpfoyer17.dto.BlocRequest;
 import tn.esprit.tpfoyer17.entities.Bloc;
 import tn.esprit.tpfoyer17.services.IBlocService;
 
@@ -24,8 +25,8 @@ public class BlocController {
     // Order 1
     @Operation(description = "methode pour ajouter des blocs",summary = "ajouter un bloc",operationId = "1")
     @PostMapping("add")
-    public Bloc addingBloc(@RequestBody Bloc bloc){
-        return blocService.addBloc(bloc);
+    public Bloc addingBloc(@RequestBody BlocRequest request){
+        return blocService.addBloc(request.toEntity());
     }
 
     // Order 2
@@ -48,7 +49,9 @@ public class BlocController {
 
     // Order 5
     @PutMapping("update")
-    public Bloc updatingBloc(@RequestBody Bloc bloc){
+    public Bloc updatingBloc(@RequestBody BlocRequest request){
+        Bloc bloc = blocService.getBlocById(request.idBloc());
+        request.applyTo(bloc);
         return blocService.updateBloc(bloc);
     }
 
