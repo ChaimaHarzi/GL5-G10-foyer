@@ -112,6 +112,30 @@ class ReservationServiceIT {
     }
 
     @Test
+    void ajouterReservation_twoEtudiantsInDoubleRoom_shareTheSameReservation() {
+        etudiant(111);
+        etudiant(222);
+        // Reservation from last year: the room is free this year
+        Reservation old = reservationRepository.save(Reservation.builder()
+                .idReservation("OLD")
+                .anneeUniversitaire(new Date(System.currentTimeMillis() - 400L * 24 * 3600 * 1000))
+                .estValide(false)
+                .build());
+        Bloc bloc = blocRepository.save(Bloc.builder().nomBloc("A").build());
+        chambreRepository.save(Chambre.builder()
+                .numeroChambre(101).typeChambre(TypeChambre.DOUBLE).bloc(bloc)
+                .reservations(new HashSet<>(Set.of(old)))
+                .build());
+
+        Reservation first = reservationService.ajouterReservation(bloc.getIdBloc(), 111);
+        reservationService.ajouterReservation(bloc.getIdBloc(), 222);
+
+        Reservation reloaded = reservationService.getReservationById(first.getIdReservation());
+        assertEquals(2, reloaded.getEtudiants().size());
+        assertFalse(reloaded.isEstValide());
+    }
+
+    @Test
     void annulerReservation_removesEtudiantAndReopensReservation() {
         Etudiant e = etudiant(111);
         Reservation r = reservation("R1", e);

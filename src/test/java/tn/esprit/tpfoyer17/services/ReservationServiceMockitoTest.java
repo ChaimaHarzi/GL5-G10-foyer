@@ -187,6 +187,22 @@ class ReservationServiceMockitoTest {
         assertTrue(result.isEstValide());
     }
 
+    @Test
+    void ajouterReservation_newReservation_isLinkedToChambre() {
+        Etudiant etudiant = Etudiant.builder().cinEtudiant(111).build();
+        Chambre chambre = Chambre.builder().idChambre(5L).typeChambre(TypeChambre.DOUBLE).build();
+        when(reservationRepository.findForReservation(1L)).thenReturn(null);
+        when(etudiantRepository.findByCinEtudiant(111L)).thenReturn(etudiant);
+        when(chambreRepository.getForReservation(1L)).thenReturn(chambre);
+        when(blocRepository.findById(1L)).thenReturn(Optional.of(Bloc.builder().idBloc(1L).nomBloc("A").build()));
+        when(reservationRepository.save(any(Reservation.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Reservation result = reservationService.ajouterReservation(1L, 111L);
+
+        assertTrue(chambre.getReservations().contains(result));
+        verify(chambreRepository).save(chambre);
+    }
+
     // ---------- annulerReservation ----------
 
     @Test

@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import tn.esprit.tpfoyer17.entities.Bloc;
 import tn.esprit.tpfoyer17.entities.Chambre;
 import tn.esprit.tpfoyer17.entities.Etudiant;
@@ -52,6 +53,7 @@ public class ReservationService implements IReservationService{
     }
 
     @Override
+    @Transactional
     public Reservation ajouterReservation(long idBloc, long cinEtudiant) {
 
         if (reservationRepository.findForReservation(idBloc) != null) {
@@ -85,7 +87,15 @@ public class ReservationService implements IReservationService{
                 reservation.setEstValide(true);
             }
 
-        return reservationRepository.save(reservation);
+            // Chambre owns the Chambre-Reservation relation: the reservation must be added
+            // to the room, otherwise findForReservation never finds it for the next student.
+            Reservation saved = reservationRepository.save(reservation);
+            if (chambre.getReservations() == null) {
+                chambre.setReservations(new HashSet<>());
+            }
+            chambre.getReservations().add(saved);
+            chambreRepository.save(chambre);
+            return saved;
         }
 
 
