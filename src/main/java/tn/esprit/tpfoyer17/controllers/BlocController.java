@@ -56,7 +56,15 @@ public class BlocController {
 
     // Order 5
     @PutMapping("update")
-    public Bloc updatingBloc(@RequestBody Bloc bloc){
+    public Bloc updatingBloc(@RequestBody BlocDTO dto){
+        if (dto.idBloc() == null) {
+            throw new IllegalArgumentException("idBloc est obligatoire pour une mise a jour");
+        }
+        // Start from the bloc stored in the database (404 if unknown), never from the client's object
+        Bloc bloc = blocService.getBlocById(dto.idBloc());
+        bloc.setNomBloc(dto.nomBloc());
+        bloc.setCapaciteBloc(dto.capaciteBloc());
+        bloc.setFoyer(dto.idFoyer() == null ? null : Foyer.builder().idFoyer(dto.idFoyer()).build());
         return blocService.updateBloc(bloc);
     }
 
