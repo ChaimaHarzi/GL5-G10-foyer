@@ -1,5 +1,6 @@
 package tn.esprit.tpfoyer17.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
@@ -33,6 +34,9 @@ public class Etudiant implements Serializable {
 
     Date dateNaissance;
 
+    // Not serialized: Reservation.etudiants already links both sides, serializing this
+    // back-reference too makes Jackson loop forever (Reservation -> Etudiant -> Reservation...)
+    @JsonIgnore
     @ToString.Exclude
     @ManyToMany(mappedBy = "etudiants")
     Set<Reservation> reservations;

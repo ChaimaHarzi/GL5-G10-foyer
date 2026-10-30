@@ -11,6 +11,7 @@ import tn.esprit.tpfoyer17.repositories.BlocRepository;
 import tn.esprit.tpfoyer17.repositories.ChambreRepository;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 
 @Service
 @AllArgsConstructor
@@ -33,7 +34,8 @@ public class BlocService implements IBlocService{
     }
     @Override
     public Bloc getBlocById(long idBloc) {
-        return blocRepository.findById(idBloc).get();
+        return blocRepository.findById(idBloc)
+                .orElseThrow(() -> new NoSuchElementException("Bloc introuvable : " + idBloc));
     }
     @Override
     public void deleteBloc(long idBloc) {
@@ -46,12 +48,14 @@ public class BlocService implements IBlocService{
 
     @Override
     public Bloc affecterChambresABloc(List<Long> numChambre, long idBloc) {
-        Bloc bloc = blocRepository.findById(idBloc).get();
+        Bloc bloc = getBlocById(idBloc);
         List<Chambre> chambres = (List<Chambre>) chambreRepository.findAllById(numChambre);
         for (Chambre chambre: chambres) {
             chambre.setBloc(bloc);
-            blocRepository.save(bloc);
         }
+        // Chambre owns the relation (Bloc.chambres is mappedBy): saving the bloc does not
+        // store the link, the chambres themselves must be saved.
+        chambreRepository.saveAll(chambres);
         return bloc;
     }
 

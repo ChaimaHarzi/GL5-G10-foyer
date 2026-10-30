@@ -106,5 +106,7 @@ class BlocServiceMockitoTest {
         assertSame(bloc, result);
         assertSame(bloc, c1.getBloc());
         assertSame(bloc, c2.getBloc());
+        // Chambre owns the Bloc-Chambre relation: the chambres themselves must be saved
+        verify(chambreRepository).saveAll(List.of(c1, c2));
     }
 }

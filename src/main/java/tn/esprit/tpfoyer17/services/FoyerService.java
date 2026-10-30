@@ -11,6 +11,7 @@ import tn.esprit.tpfoyer17.repositories.FoyerRepository;
 import tn.esprit.tpfoyer17.repositories.UniversiteRepository;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 
 @Service
 @AllArgsConstructor
@@ -32,7 +33,8 @@ public class FoyerService implements IFoyerService{
     }
     @Override
     public Foyer getFoyerById(long idFoyer) {
-        return foyerRepository.findById(idFoyer).get();
+        return foyerRepository.findById(idFoyer)
+                .orElseThrow(() -> new NoSuchElementException("Foyer introuvable : " + idFoyer));
     }
     @Override
     public void deleteFoyer(long idFoyer) {
@@ -45,8 +47,10 @@ public class FoyerService implements IFoyerService{
 
     @Override
     public Foyer ajouterFoyerEtAffecterAUniversite(Foyer foyer, long idUniversite) {
+        // Checked before saving the foyer, so an unknown universite does not leave an orphan foyer
+        Universite universite = universiteRepository.findById(idUniversite)
+                .orElseThrow(() -> new NoSuchElementException("Universite introuvable : " + idUniversite));
         Foyer foyer1 = foyerRepository.save(foyer);
-        Universite universite = universiteRepository.findById(idUniversite).get();
         universite.setFoyer(foyer1);
         universiteRepository.save(universite);
         return foyer1 ;

@@ -112,6 +112,37 @@ class ReservationServiceIT {
     }
 
     @Test
+    void ajouterReservation_twoEtudiantsInDoubleRoom_shareTheSameReservation() {
+        etudiant(111);
+        etudiant(222);
+        // A room that was never reserved: the first reservation must work on an empty database
+        Bloc bloc = blocRepository.save(Bloc.builder().nomBloc("A").build());
+        chambreRepository.save(Chambre.builder()
+                .numeroChambre(101).typeChambre(TypeChambre.DOUBLE).bloc(bloc)
+                .build());
+
+        Reservation first = reservationService.ajouterReservation(bloc.getIdBloc(), 111);
+        reservationService.ajouterReservation(bloc.getIdBloc(), 222);
+
+        Reservation reloaded = reservationService.getReservationById(first.getIdReservation());
+        assertEquals(2, reloaded.getEtudiants().size());
+        assertFalse(reloaded.isEstValide());
+    }
+
+    @Test
+    void ajouterReservation_sameEtudiantTwiceThisYear_isRefused() {
+        etudiant(111);
+        Bloc bloc = blocRepository.save(Bloc.builder().nomBloc("A").build());
+        chambreRepository.save(Chambre.builder().numeroChambre(101).typeChambre(TypeChambre.DOUBLE).bloc(bloc).build());
+        chambreRepository.save(Chambre.builder().numeroChambre(102).typeChambre(TypeChambre.DOUBLE).bloc(bloc).build());
+
+        Reservation first = reservationService.ajouterReservation(bloc.getIdBloc(), 111);
+
+        assertThrows(IllegalStateException.class, () -> reservationService.ajouterReservation(bloc.getIdBloc(), 111));
+        assertEquals(1, reservationService.getReservationById(first.getIdReservation()).getEtudiants().size());
+    }
+
+    @Test
     void annulerReservation_removesEtudiantAndReopensReservation() {
         Etudiant e = etudiant(111);
         Reservation r = reservation("R1", e);

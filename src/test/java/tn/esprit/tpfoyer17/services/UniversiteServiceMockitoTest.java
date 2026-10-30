@@ -118,6 +118,16 @@ class UniversiteServiceMockitoTest {
     }
 
     @Test
+    void affecterFoyerAUniversite_unknownUniversite_throwsNotFound() {
+        when(universiteRepository.findByNomUniversite("INCONNUE")).thenReturn(null);
+
+        NoSuchElementException e = assertThrows(NoSuchElementException.class,
+                () -> universiteService.affecterFoyerAUniversite(1L, "INCONNUE"));
+        assertTrue(e.getMessage().contains("INCONNUE"));
+        verify(universiteRepository, never()).save(any());
+    }
+
+    @Test
     void desaffecterFoyerAUniversite_removesFoyerFromUniversite() {
         Foyer foyer = Foyer.builder().nomFoyer("Foyer A").build();
         Universite universite = Universite.builder().nomUniversite("ESPRIT").foyer(foyer).build();

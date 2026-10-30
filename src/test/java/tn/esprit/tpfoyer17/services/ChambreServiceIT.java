@@ -7,14 +7,19 @@ import org.springframework.transaction.annotation.Transactional;
 import tn.esprit.tpfoyer17.entities.Bloc;
 import tn.esprit.tpfoyer17.entities.Chambre;
 import tn.esprit.tpfoyer17.entities.Foyer;
+import tn.esprit.tpfoyer17.entities.Reservation;
 import tn.esprit.tpfoyer17.entities.Universite;
 import tn.esprit.tpfoyer17.entities.enumerations.TypeChambre;
 import tn.esprit.tpfoyer17.repositories.BlocRepository;
 import tn.esprit.tpfoyer17.repositories.FoyerRepository;
+import tn.esprit.tpfoyer17.repositories.ReservationRepository;
 import tn.esprit.tpfoyer17.repositories.UniversiteRepository;
 
+import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -38,6 +43,9 @@ class ChambreServiceIT {
 
     @Autowired
     UniversiteRepository universiteRepository;
+
+    @Autowired
+    ReservationRepository reservationRepository;
 
     /** Creates Universite -> Foyer -> Bloc, the hierarchy a Chambre belongs to. */
     private Bloc createBlocInUniversite(String nomUniversite) {
@@ -134,13 +142,37 @@ class ChambreServiceIT {
     }
 
     @Test
-    void getChambresNonReserveParNomUniversiteEtTypeChambre_noReservations_returnsEmpty() {
+    void getChambresNonReserveParNomUniversiteEtTypeChambre_neverReservedRoom_isReturned() {
         Bloc bloc = createBlocInUniversite("ESPRIT");
         chambreService.addChambre(Chambre.builder().numeroChambre(101).typeChambre(TypeChambre.SIMPLE).bloc(bloc).build());
 
         List<Chambre> result =
                 chambreService.getChambresNonReserveParNomUniversiteEtTypeChambre("ESPRIT", TypeChambre.SIMPLE);
 
-        assertTrue(result.isEmpty());
+        assertEquals(1, result.size());
+        assertEquals(101, result.get(0).getNumeroChambre());
+    }
+
+    @Test
+    void getChambresNonReserveParNomUniversiteEtTypeChambre_excludesRoomsReservedThisYear() {
+        Bloc bloc = createBlocInUniversite("ESPRIT");
+        chambreService.addChambre(Chambre.builder().numeroChambre(101).typeChambre(TypeChambre.SIMPLE).bloc(bloc)
+                .reservations(new HashSet<>(Set.of(reservation("R-THIS-YEAR", new Date())))).build());
+        chambreService.addChambre(Chambre.builder().numeroChambre(102).typeChambre(TypeChambre.SIMPLE).bloc(bloc)
+                .reservations(new HashSet<>(Set.of(reservation("R-LAST-YEAR", unAnAvant())))).build());
+
+        List<Chambre> result =
+                chambreService.getChambresNonReserveParNomUniversiteEtTypeChambre("ESPRIT", TypeChambre.SIMPLE);
+
+        assertEquals(1, result.size());
+        assertEquals(102, result.get(0).getNumeroChambre());
+    }
+
+    private Reservation reservation(String id, Date annee) {
+        return reservationRepository.save(Reservation.builder().idReservation(id).anneeUniversitaire(annee).build());
+    }
+
+    private static Date unAnAvant() {
+        return new Date(System.currentTimeMillis() - 400L * 24 * 3600 * 1000);
     }
 }
