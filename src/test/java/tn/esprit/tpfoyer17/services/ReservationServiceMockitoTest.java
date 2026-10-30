@@ -216,6 +216,18 @@ class ReservationServiceMockitoTest {
     }
 
     @Test
+    void ajouterReservation_etudiantAlreadyReservedThisYear_throwsConflict() {
+        when(etudiantRepository.findByCinEtudiant(111L)).thenReturn(Etudiant.builder().cinEtudiant(111).build());
+        when(reservationRepository.findByEtudiantsCinEtudiantAndAnneeUniversitaire(111L, Year.now().getValue()))
+                .thenReturn(reservationAvec());
+
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                () -> reservationService.ajouterReservation(1L, 111L));
+        assertTrue(e.getMessage().contains("deja une reservation"));
+        verify(reservationRepository, never()).save(any());
+    }
+
+    @Test
     void ajouterReservation_unknownCin_throwsNotFound() {
         when(etudiantRepository.findByCinEtudiant(999L)).thenReturn(null);
 

@@ -66,6 +66,10 @@ public class ReservationService implements IReservationService{
     public Reservation ajouterReservation(long idBloc, long cinEtudiant) {
 
         Etudiant etudiant = getEtudiantByCin(cinEtudiant);
+        // One reservation per student and per year
+        if (reservationRepository.findByEtudiantsCinEtudiantAndAnneeUniversitaire(cinEtudiant, Year.now().getValue()) != null) {
+            throw new IllegalStateException("L'etudiant CIN " + cinEtudiant + " a deja une reservation cette annee");
+        }
         Reservation existante = reservationRepository.findForReservation(idBloc);
         if (existante != null) {
             Reservation reservation = existante;

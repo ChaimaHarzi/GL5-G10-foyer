@@ -130,6 +130,19 @@ class ReservationServiceIT {
     }
 
     @Test
+    void ajouterReservation_sameEtudiantTwiceThisYear_isRefused() {
+        etudiant(111);
+        Bloc bloc = blocRepository.save(Bloc.builder().nomBloc("A").build());
+        chambreRepository.save(Chambre.builder().numeroChambre(101).typeChambre(TypeChambre.DOUBLE).bloc(bloc).build());
+        chambreRepository.save(Chambre.builder().numeroChambre(102).typeChambre(TypeChambre.DOUBLE).bloc(bloc).build());
+
+        Reservation first = reservationService.ajouterReservation(bloc.getIdBloc(), 111);
+
+        assertThrows(IllegalStateException.class, () -> reservationService.ajouterReservation(bloc.getIdBloc(), 111));
+        assertEquals(1, reservationService.getReservationById(first.getIdReservation()).getEtudiants().size());
+    }
+
+    @Test
     void annulerReservation_removesEtudiantAndReopensReservation() {
         Etudiant e = etudiant(111);
         Reservation r = reservation("R1", e);
