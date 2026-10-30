@@ -11,6 +11,7 @@ import tn.esprit.tpfoyer17.entities.Etudiant;
 import tn.esprit.tpfoyer17.entities.Reservation;
 import tn.esprit.tpfoyer17.services.IEtudiantService;
 
+import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -54,7 +55,7 @@ class EtudiantControllerTest {
         assertEquals("Ali", saved.getValue().getNomEtudiant());
         assertEquals("Ben", saved.getValue().getPrenomEtudiant());
         assertEquals(111, saved.getValue().getCinEtudiant());
-        assertNotNull(saved.getValue().getDateNaissance());
+        assertEquals(LocalDate.of(2002, 5, 10), saved.getValue().getDateNaissance());
     }
 
     @Test

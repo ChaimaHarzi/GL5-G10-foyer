@@ -7,7 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import tn.esprit.tpfoyer17.entities.Etudiant;
 import tn.esprit.tpfoyer17.repositories.EtudiantRepository;
 
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -31,7 +31,7 @@ class EtudiantServiceIT {
     @Test
     void addEtudiant_persistsEtudiantWithGeneratedId() {
         Etudiant saved = etudiantService.addEtudiant(Etudiant.builder()
-                .nomEtudiant("Harzi").prenomEtudiant("Chaima").cinEtudiant(12345678).dateNaissance(new Date())
+                .nomEtudiant("Harzi").prenomEtudiant("Chaima").cinEtudiant(12345678).dateNaissance(LocalDate.now())
                 .build());
 
         assertTrue(saved.getIdEtudiant() > 0);
