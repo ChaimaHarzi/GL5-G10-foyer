@@ -9,8 +9,6 @@ import org.springframework.stereotype.Component;
 
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.Date;
-
 @Component
 @Aspect
 @Slf4j
@@ -18,10 +16,11 @@ public class AOPConfig {
 
 	@Around("execution(* tn.esprit.tpfoyer17.services.ReservationService.ajouterReservation(..))")
 	public Object temps(ProceedingJoinPoint pjp) throws Throwable {
-		Date start = new Date();
+		long start = System.currentTimeMillis();
 		Object obj = pjp.proceed();
-		int time = new Date().compareTo(start);
-		log.info("temps d'execution = "+time);
+		// elapsed time in ms (Date.compareTo only returns -1, 0 or 1)
+		long time = System.currentTimeMillis() - start;
+		log.info("temps d'execution = {} ms", time);
 		return obj;
 	}
 
