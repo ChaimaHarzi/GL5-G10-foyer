@@ -62,7 +62,9 @@ class FoyerServiceIT {
 
         foyerService.deleteFoyer(saved.getIdFoyer());
 
-        assertThrows(NoSuchElementException.class, () -> foyerService.getFoyerById(saved.getIdFoyer()));
+        long idFoyer = saved.getIdFoyer();
+        assertThrows(NoSuchElementException.class, () -> foyerService.getFoyerById(idFoyer));
+
     }
 
     @Test

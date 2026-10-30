@@ -82,7 +82,9 @@ class ChambreServiceIT {
 
         chambreService.deleteChambre(saved.getIdChambre());
 
-        assertThrows(NoSuchElementException.class, () -> chambreService.getChambreById(saved.getIdChambre()));
+        long idChambre = saved.getIdChambre();
+        assertThrows(NoSuchElementException.class, () -> chambreService.getChambreById(idChambre));
+
     }
 
     @Test

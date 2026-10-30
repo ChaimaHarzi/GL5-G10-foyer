@@ -65,7 +65,9 @@ class EtudiantServiceIT {
 
         etudiantService.deleteEtudiant(saved.getIdEtudiant());
 
-        assertThrows(NoSuchElementException.class, () -> etudiantService.getEtudiantById(saved.getIdEtudiant()));
+        long idEtudiant = saved.getIdEtudiant();
+        assertThrows(NoSuchElementException.class, () -> etudiantService.getEtudiantById(idEtudiant));
+
     }
 
     @Test

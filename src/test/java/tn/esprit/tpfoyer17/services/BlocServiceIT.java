@@ -62,7 +62,9 @@ class BlocServiceIT {
 
         blocService.deleteBloc(saved.getIdBloc());
 
-        assertThrows(NoSuchElementException.class, () -> blocService.getBlocById(saved.getIdBloc()));
+        long idBloc = saved.getIdBloc();
+        assertThrows(NoSuchElementException.class, () -> blocService.getBlocById(idBloc));
+
     }
 
     @Test

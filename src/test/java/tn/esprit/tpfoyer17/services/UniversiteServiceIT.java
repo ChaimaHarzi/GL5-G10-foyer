@@ -1,5 +1,4 @@
 package tn.esprit.tpfoyer17.services;
-/////////////////////////////////////////////
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -64,8 +63,9 @@ class UniversiteServiceIT {
 
         universiteService.deleteUniversite(saved.getIdUniversite());
 
-        assertThrows(NoSuchElementException.class,
-                () -> universiteService.getUniversiteById(saved.getIdUniversite()));
+        long idUniversite = saved.getIdUniversite();
+        assertThrows(NoSuchElementException.class, () -> universiteService.getUniversiteById(idUniversite));
+
     }
 
     @Test
