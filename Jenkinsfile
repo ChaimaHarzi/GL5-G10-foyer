@@ -25,7 +25,7 @@ pipeline {
         IMAGE_REPO = 'tpfoyer'
         TF_VAR_cluster_name='tpfoyer-eks-chaima'
         // S3 bucket holding the Terraform state (created once by hand, see step 2).
-        TF_STATE_BUCKET = 'tpfoyer-tfstate-chaima-123456789012'
+        TF_STATE_BUCKET = 'tpfoyer-tfstate-chaima-058264229450'
 
         // Who receives the build notifications (success and failure).
         NOTIFY_EMAIL = 'chaima.harzi@etudiant-fst.utm.tn'
