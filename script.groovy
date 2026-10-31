@@ -53,9 +53,11 @@ def publishToNexus() {
             passwordVariable: 'NEXUS_PASS')]) {
         def releaseVersion = params.RELEASE_VERSION?.trim()
         if (releaseVersion) {
+            //Le plugin versions remplace <version>0.0.1-SNAPSHOT</version> par <version>1.0.0</version> dans le pom.xml, dans le workspace Jenkins seulement. Le pom sur GitHub ne change pas, et le prochain checkout -f le remettra en SNAPSHOT.
             sh "mvn -B -ntp versions:set -DnewVersion=${releaseVersion} -DgenerateBackupPoms=false"
             sh 'mvn -B -ntp -s ci-settings.xml clean deploy -DskipTests'
         } else {
+            //lle refait donc tout le parcours : compile (rien à faire), test (sauté avec -DskipTests), package (le jar), verify, install (copie dans ~/.m2 de Jenkins), puis deploy, qui envoie le jar et le pom à Nexus.
             sh 'mvn -B -ntp -s ci-settings.xml deploy -DskipTests'
         }
     }
@@ -102,7 +104,7 @@ def withEks(Closure body) {
         withEnv(['AWS_DEFAULT_REGION=us-west-2',
                  "KUBECONFIG=${env.WORKSPACE}/kubeconfig"]) {
             body()
-        }
+        }//kubeconfig : l adreesse https de l api du cluster ,certificat ,qui est autorisé ..
     }
 }
 
