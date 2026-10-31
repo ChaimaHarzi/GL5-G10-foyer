@@ -17,6 +17,8 @@ pipeline {
     parameters {
         choice(name: 'TF_ACTION', choices: ['apply', 'destroy'],
                description: 'apply = create/update the AWS infrastructure, destroy = delete it')
+        string(name: 'RELEASE_VERSION', defaultValue: '',
+               description: 'Empty = publish the SNAPSHOT to maven-snapshots. A version (e.g. 1.0.0) = publish a release to maven-releases')
     }
 
     environment {

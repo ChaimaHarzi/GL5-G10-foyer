@@ -45,11 +45,19 @@ def sonarQube() {
 
 // Nexus: publishes the jar (maven-snapshots for -SNAPSHOT versions, maven-releases otherwise).
 // Credentials come from the 'nexus-creds' Jenkins credential and are read by ci-settings.xml.
+// With RELEASE_VERSION set, the version is changed only in this workspace (the pom in git stays -SNAPSHOT),
+// and "clean" leaves a single jar in target/ for the Dockerfile.
 def publishToNexus() {
     withCredentials([usernamePassword(credentialsId: 'nexus-creds',
             usernameVariable: 'NEXUS_USER',
             passwordVariable: 'NEXUS_PASS')]) {
-        sh 'mvn -B -ntp -s ci-settings.xml deploy -DskipTests'
+        def releaseVersion = params.RELEASE_VERSION?.trim()
+        if (releaseVersion) {
+            sh "mvn -B -ntp versions:set -DnewVersion=${releaseVersion} -DgenerateBackupPoms=false"
+            sh 'mvn -B -ntp -s ci-settings.xml clean deploy -DskipTests'
+        } else {
+            sh 'mvn -B -ntp -s ci-settings.xml deploy -DskipTests'
+        }
     }
 }
 
@@ -165,7 +173,7 @@ def deployToAwsKubernetes() {
         sh 'kubectl apply -f k8s/mysql.yaml'
         sh 'kubectl -n tpfoyer rollout status statefulset/mysql --timeout=5m'
 
-        // __IMAGE__ in app.yaml becomes the image pushed by this build, e.g. fourat10/tpfoyer:23
+        // __IMAGE__ in app.yaml becomes the image pushed by this build
         sh "sed 's|__IMAGE__|${env.IMAGE_NAME}:${env.BUILD_NUMBER}|' k8s/app.yaml | kubectl apply -f -"
         sh 'kubectl -n tpfoyer rollout status deployment/tpfoyer --timeout=10m'
 
