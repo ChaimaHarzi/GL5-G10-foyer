@@ -115,6 +115,19 @@ def deployImage() {
     sh 'docker logout'
 }
 
+// Docker Hub: pushes the front image with both tags, with the same credential as the back.
+// The repository is created by Docker Hub at the first push (public: the image only holds the static site).
+def deployFrontImage() {
+    withCredentials([usernamePassword(credentialsId: 'docker-hub-repo',
+            usernameVariable: 'DOCKER_USER',
+            passwordVariable: 'DOCKER_PASS')]) {
+        sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+        sh "docker push ${env.FRONT_IMAGE_NAME}:${env.BUILD_NUMBER}"
+        sh "docker push ${env.FRONT_IMAGE_NAME}:latest"
+    }
+    sh 'docker logout'
+}
+
 // Wraps EKS commands: injects the AWS keys from the Jenkins credentials and points kubectl
 // at the kubeconfig written in step 11 (kept in the workspace of this build).
 def withEks(Closure body) {

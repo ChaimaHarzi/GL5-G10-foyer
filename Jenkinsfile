@@ -161,6 +161,14 @@ pipeline {
                         }
                     }
                 }
+
+                stage('DEPLOY FRONT IMAGE') {
+                    steps {
+                        script {
+                            gv.deployFrontImage()
+                        }
+                    }
+                }
             }
         }
 
@@ -216,7 +224,7 @@ pipeline {
                     <p>
                       <b>Job:</b> ${env.JOB_NAME}<br>
                       <b>Action:</b> ${params.TF_ACTION ?: 'apply'}<br>
-                      <b>Docker image:</b> ${params.TF_ACTION == 'destroy' ? '-' : env.IMAGE_NAME + ':' + env.BUILD_NUMBER}<br>
+                      <b>Docker images:</b> ${params.TF_ACTION == 'destroy' ? '-' : env.IMAGE_NAME + ':' + env.BUILD_NUMBER + ' (back), ' + env.FRONT_IMAGE_NAME + ':' + env.BUILD_NUMBER + ' (front)'}<br>
                       <b>Duration:</b> ${currentBuild.durationString}
                     </p>
                     <p>
