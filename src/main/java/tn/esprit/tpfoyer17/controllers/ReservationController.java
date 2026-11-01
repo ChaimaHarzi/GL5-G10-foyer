@@ -4,6 +4,7 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 import tn.esprit.tpfoyer17.entities.Reservation;
 import tn.esprit.tpfoyer17.services.IReservationService;
@@ -41,15 +42,15 @@ public class ReservationController {
     }
 
     @PutMapping("ajouter-reservation")
-    public Reservation ajouterReservation (@RequestParam("idChambre") long idChambre, @RequestParam("cinEtudiant") long cinEtudiant){
-        return reservationService.ajouterReservation(idChambre,cinEtudiant);
+    public Reservation ajouterReservation (@RequestParam("idBloc") long idBloc, @RequestParam("cinEtudiant") long cinEtudiant){
+        return reservationService.ajouterReservation(idBloc,cinEtudiant);
     }
     @PutMapping("annuler-reservation")
     public Reservation annulerReservation (@RequestParam("cinEtudiant") long cinEtudiant){
         return reservationService.annulerReservation(cinEtudiant);
     }
     @GetMapping("get-reservation-annee-universitaire-nom-universitaire")
-    public List<Reservation>  getReservationParAnneeUniversitaireEtNomUniversite(@RequestParam("anneeUniversite") Date anneeUniversite, @RequestParam("nomUniversite") String nomUniversite){
+    public List<Reservation>  getReservationParAnneeUniversitaireEtNomUniversite(@RequestParam("anneeUniversite") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date anneeUniversite, @RequestParam("nomUniversite") String nomUniversite){
         return reservationService.getReservationParAnneeUniversitaireEtNomUniversite(anneeUniversite,nomUniversite);
     }
 }

@@ -11,8 +11,11 @@ import tn.esprit.tpfoyer17.entities.Bloc;
 import tn.esprit.tpfoyer17.entities.Foyer;
 import tn.esprit.tpfoyer17.services.IBlocService;
 
+import java.util.NoSuchElementException;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -68,5 +71,14 @@ class BlocControllerTest {
 
         assertEquals(200, existing.getCapaciteBloc());
         assertSame(foyer, existing.getFoyer());
+    }
+
+    @Test
+    void gettingBloc_unknownId_returns404() throws Exception {
+        when(blocService.getBlocById(99)).thenThrow(new NoSuchElementException("No value present"));
+
+        mockMvc.perform(get("/api/blocs/get").param("idBloc", "99"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404));
     }
 }
