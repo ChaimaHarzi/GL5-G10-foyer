@@ -52,9 +52,16 @@ public class ReservationService implements IReservationService{
     }
 
     @Override
+    @Transactional
     public void deleteReservation(String idReservation) {
+        // Chambre owns the Chambre-Reservation relation (table chambre_reservations): the reservation
+        // must leave its room first, otherwise the foreign key forbids deleting it
+        Chambre chambre = chambreRepository.findByReservationsIdReservation(idReservation);
+        if (chambre != null) {
+            chambre.getReservations().removeIf(r -> r.getIdReservation().equals(idReservation));
+            chambreRepository.save(chambre);
+        }
         reservationRepository.deleteById(idReservation);
-
     }
 
     @Override

@@ -85,6 +85,22 @@ class ReservationServiceMockitoTest {
         reservationService.deleteReservation("R1");
 
         verify(reservationRepository).deleteById("R1");
+        verify(chambreRepository, never()).save(any());
+    }
+
+    @Test
+    void deleteReservation_ofARoom_removesItFromTheRoomBeforeDeleting() {
+        Reservation reservation = reservationAvec();
+        Chambre chambre = Chambre.builder().idChambre(1L).typeChambre(TypeChambre.DOUBLE)
+                .reservations(new HashSet<>(Set.of(reservation))).build();
+        when(chambreRepository.findByReservationsIdReservation(reservation.getIdReservation())).thenReturn(chambre);
+
+        reservationService.deleteReservation(reservation.getIdReservation());
+
+        assertTrue(chambre.getReservations().isEmpty());
+        var ordre = inOrder(chambreRepository, reservationRepository);
+        ordre.verify(chambreRepository).save(chambre);
+        ordre.verify(reservationRepository).deleteById(reservation.getIdReservation());
     }
 
     @Test

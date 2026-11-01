@@ -1,5 +1,6 @@
 package tn.esprit.tpfoyer17.services;
 
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -44,6 +45,9 @@ class ReservationServiceIT {
 
     @Autowired
     BlocRepository blocRepository;
+
+    @Autowired
+    EntityManager entityManager;
 
     private Etudiant etudiant(long cin) {
         return etudiantRepository.save(Etudiant.builder().nomEtudiant("Etudiant " + cin).cinEtudiant(cin).build());
@@ -91,6 +95,27 @@ class ReservationServiceIT {
         reservationService.deleteReservation("R1");
 
         assertThrows(NoSuchElementException.class, () -> reservationService.getReservationById("R1"));
+    }
+
+    @Test
+    void deleteReservation_ofARoom_removesItFromTheRoomAndKeepsTheStudents() {
+        Etudiant e = etudiant(111);
+        Reservation r = reservation("R1", e);
+        Bloc bloc = blocRepository.save(Bloc.builder().nomBloc("A").build());
+        Chambre chambre = chambreRepository.save(Chambre.builder()
+                .numeroChambre(101).typeChambre(TypeChambre.DOUBLE).bloc(bloc)
+                .reservations(new HashSet<>(Set.of(r)))
+                .build());
+        entityManager.flush();
+
+        reservationService.deleteReservation("R1");
+        // Send the SQL now: the foreign key of chambre_reservations is only checked by the database
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThrows(NoSuchElementException.class, () -> reservationService.getReservationById("R1"));
+        assertTrue(chambreRepository.findById(chambre.getIdChambre()).orElseThrow().getReservations().isEmpty());
+        assertTrue(etudiantRepository.findById(e.getIdEtudiant()).isPresent());
     }
 
     @Test
