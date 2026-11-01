@@ -96,6 +96,22 @@ pipeline {
                     }
                 }
 
+                stage('FRONT TESTS') {
+                    steps {
+                        script {
+                            gv.frontTests()
+                        }
+                    }
+                    post {
+                        always {
+                            junit(
+                                testResults: 'frontend/reports/junit/*.xml',
+                                allowEmptyResults: true
+                            )
+                        }
+                    }
+                }
+
                 stage('ARTIFACT CONSTRUCTION') {
                     steps {
                         script {

@@ -1,0 +1,12 @@
+# Everything Docker does not need to build the image of the front
+node_modules
+dist
+.angular
+reports
+coverage
+.vscode
+.gitignore
+.editorconfig
+*.md
+Dockerfile
+.dockerignore

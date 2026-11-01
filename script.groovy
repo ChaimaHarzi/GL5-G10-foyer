@@ -29,6 +29,22 @@ def integrationTests() {
     sh 'mvn -B -ntp jacoco:prepare-agent failsafe:integration-test failsafe:verify jacoco:report'
 }
 
+// Front tests (Angular, Karma + Jasmine): they run inside "docker build", in the "test" stage of
+// frontend/Dockerfile, because Node and Chromium are in that image and not on Jenkins.
+// A failing test makes the build fail. The JUnit report is then copied out of the image for Jenkins.
+def frontTests() {
+    def image = "tpfoyer-front-test:${env.BUILD_NUMBER}"
+    def container = "front-test-${env.BUILD_NUMBER}"
+    sh "docker build --target test -t ${image} frontend"
+    sh """
+        rm -rf frontend/reports
+        docker create --name ${container} ${image}
+        docker cp ${container}:/app/reports frontend/reports
+        docker rm ${container}
+        docker rmi ${image}
+    """
+}
+
 // SonarQube: static analysis of the code + coverage read from the JaCoCo report
 // (target/site/jacoco/jacoco.xml, produced by the test stages).
 def sonarQube() {
