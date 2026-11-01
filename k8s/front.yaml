@@ -1,0 +1,61 @@
+# The Angular front: 2 Nginx pods behind the only public AWS load balancer.
+# Nginx serves the Angular pages and forwards /tpFoyer17/... (API, Swagger) to the back.
+# __IMAGE__ is replaced by Jenkins with the front image of the build (e.g. chaimaigl/tpfoyer-front:23).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tpfoyer-front
+  namespace: tpfoyer
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: tpfoyer-front
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1 # start 1 new pod at a time...
+      maxUnavailable: 0 # ...and never stop an old pod before a new one is ready
+  template:
+    metadata:
+      labels:
+        app: tpfoyer-front
+    spec:
+      containers:
+        - name: tpfoyer-front
+          image: __IMAGE__
+          ports:
+            - containerPort: 80
+          env:
+            - name: API_URL # where Nginx forwards /tpFoyer17/...: the internal Service of the back
+              value: http://tpfoyer:8082
+          readinessProbe: # receives traffic as soon as Nginx answers (does not depend on the back)
+            httpGet:
+              path: /healthz
+              port: 80
+            periodSeconds: 5
+          livenessProbe: # restarted if Nginx stops answering
+            httpGet:
+              path: /healthz
+              port: 80
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 128Mi
+---
+# Public entry point of the application: AWS creates a load balancer forwarding port 80 to the Nginx pods
+apiVersion: v1
+kind: Service
+metadata:
+  name: tpfoyer-front
+  namespace: tpfoyer
+spec:
+  type: LoadBalancer
+  selector:
+    app: tpfoyer-front
+  ports:
+    - port: 80
+      targetPort: 80

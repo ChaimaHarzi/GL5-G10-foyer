@@ -190,8 +190,8 @@ def updateKubeconfig() {
     }
 }
 
-// Step 12: deploys MySQL and the application on EKS, then waits until the new version is running.
-// Each build deploys its own image tag, which makes Kubernetes perform a rolling update.
+// Step 12: deploys MySQL, the back and the front on EKS, then waits until the new versions are running.
+// Each build deploys its own image tags, which makes Kubernetes perform rolling updates.
 def deployToAwsKubernetes() {
     withEks {
         sh 'kubectl apply -f k8s/namespace.yaml -f k8s/storageclass.yaml'
@@ -215,15 +215,21 @@ def deployToAwsKubernetes() {
         sh "sed 's|__IMAGE__|${env.IMAGE_NAME}:${env.BUILD_NUMBER}|' k8s/app.yaml | kubectl apply -f -"
         sh 'kubectl -n tpfoyer rollout status deployment/tpfoyer --timeout=10m'
 
+        // The front after the back: at start-up, Nginx resolves the Service "tpfoyer" of its proxy_pass
+        sh "sed 's|__IMAGE__|${env.FRONT_IMAGE_NAME}:${env.BUILD_NUMBER}|' k8s/front.yaml | kubectl apply -f -"
+        sh 'kubectl -n tpfoyer rollout status deployment/tpfoyer-front --timeout=5m'
+
         sh 'kubectl -n tpfoyer get pods,svc'
-        // The AWS load balancer gets its public address a few seconds after the Service is created
+        // The only public address is the load balancer of the front; it is known a few seconds after
+        // the Service is created, and answers 1 to 3 minutes later (AWS DNS)
         sh '''
             for i in $(seq 1 30); do
-              HOST=$(kubectl -n tpfoyer get svc tpfoyer -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+              HOST=$(kubectl -n tpfoyer get svc tpfoyer-front -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
               [ -n "$HOST" ] && break
               sleep 10
             done
-            echo "Application: http://$HOST/tpFoyer17/swagger-ui/index.html"
+            echo "Application: http://$HOST/"
+            echo "Swagger:     http://$HOST/tpFoyer17/swagger-ui/index.html"
         '''
     }
 }

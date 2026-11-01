@@ -1,4 +1,4 @@
-# The tpFoyer application: 2 pods behind an AWS load balancer.
+# The tpFoyer API (Spring Boot): 2 pods behind an internal Service, reached through the front (k8s/front.yaml).
 # __IMAGE__ is replaced by Jenkins with the image of the build (e.g. fourat10/tpfoyer:23).
 apiVersion: apps/v1
 kind: Deployment
@@ -62,16 +62,17 @@ spec:
             limits:
               memory: 768Mi
 ---
-# Public entry point: AWS creates a load balancer forwarding port 80 to the pods' port 8082
+# Internal only (ClusterIP): the Nginx pods of the front call http://tpfoyer:8082.
+# The API and Swagger are reached from Internet through the load balancer of the front.
 apiVersion: v1
 kind: Service
 metadata:
   name: tpfoyer
   namespace: tpfoyer
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   selector:
     app: tpfoyer
   ports:
-    - port: 80
+    - port: 8082
       targetPort: 8082
