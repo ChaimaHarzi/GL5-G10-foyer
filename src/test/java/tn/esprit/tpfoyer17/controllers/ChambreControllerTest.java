@@ -14,6 +14,7 @@ import tn.esprit.tpfoyer17.entities.enumerations.TypeChambre;
 import tn.esprit.tpfoyer17.services.IChambreService;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
@@ -22,8 +23,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -86,6 +89,19 @@ class ChambreControllerTest {
                 .andExpect(status().isNotFound());
 
         verify(chambreService, never()).updateChambre(any());
+    }
+
+    @Test
+    void getChambresParBlocEtTypeKeyWord_delegatesToTheService() throws Exception {
+        // Before the fix the controller called itself and the request ended in a StackOverflowError
+        Chambre simple = Chambre.builder().idChambre(1L).numeroChambre(101).typeChambre(TypeChambre.SIMPLE).build();
+        when(chambreService.getChambresParBlocEtTypeKeyWord(3L, TypeChambre.SIMPLE)).thenReturn(List.of(simple));
+
+        mockMvc.perform(get("/api/chambres/get-par-bloc-type-keyword").param("idBloc", "3").param("typeC", "SIMPLE"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].numeroChambre").value(101));
+
+        verify(chambreService).getChambresParBlocEtTypeKeyWord(3L, TypeChambre.SIMPLE);
     }
 
     @Test
