@@ -1,0 +1,13 @@
+# Rebuilt inside the image: never send them to Docker
+node_modules
+dist
+.angular
+out-tsc
+coverage
+
+# Not needed to build the image
+.vscode
+.idea
+*.md
+Dockerfile
+.dockerignore

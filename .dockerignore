@@ -24,3 +24,7 @@ terraform
 kubeconfig
 
 k8s
+
+# The Angular frontend has its own image (frontend/Dockerfile), and monitoring runs in its own containers
+frontend
+monitoring
