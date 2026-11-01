@@ -1,0 +1,8 @@
+# Configures the EKS cluster created by Terraform, before the application is deployed.
+# Run by the Jenkins stage CONFIGURE CLUSTER: cd ansible && ansible-playbook cluster.yml
+# Each role adds one piece of equipment to the cluster; running it again changes nothing if all is in place.
+- name: Configure the EKS cluster
+  hosts: local
+  gather_facts: false
+  roles:
+    - cluster_base

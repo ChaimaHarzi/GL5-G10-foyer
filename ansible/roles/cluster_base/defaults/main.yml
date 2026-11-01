@@ -1,0 +1,5 @@
+# Namespace of the application (same as k8s/namespace.yaml)
+cluster_base_namespace: tpfoyer
+
+# The Kubernetes manifests of the project, reused as they are
+cluster_base_k8s_dir: "{{ playbook_dir }}/../k8s"

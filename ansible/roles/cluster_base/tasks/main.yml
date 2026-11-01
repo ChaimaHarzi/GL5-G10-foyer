@@ -1,0 +1,35 @@
+# Base of the cluster: what the application needs before it is deployed.
+
+- name: The cluster answers and its nodes are listed
+  kubernetes.core.k8s_info:
+    kind: Node
+  register: cluster_base_nodes
+
+- name: Show the number of nodes
+  ansible.builtin.debug:
+    msg: "{{ cluster_base_nodes.resources | length }} node(s) in the cluster"
+
+- name: The namespace of the application and the gp3 StorageClass exist
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ cluster_base_k8s_dir }}/{{ item }}"
+  loop:
+    - namespace.yaml
+    - storageclass.yaml
+
+# User and password of the 'mysql-creds' Jenkins credential, given as environment variables
+# by the Jenkins stage: they are never written in git, and no_log hides them in the console
+- name: The MySQL credentials are stored in a Secret
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: mysql-credentials
+        namespace: "{{ cluster_base_namespace }}"
+      type: Opaque
+      stringData:
+        username: "{{ lookup('ansible.builtin.env', 'DB_USERNAME') }}"
+        password: "{{ lookup('ansible.builtin.env', 'DB_PASSWORD') }}"
+  no_log: true

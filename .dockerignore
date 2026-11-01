@@ -21,6 +21,7 @@ target/*
 
 # Infrastructure files: not needed in the image
 terraform
+ansible
 kubeconfig
 
 k8s

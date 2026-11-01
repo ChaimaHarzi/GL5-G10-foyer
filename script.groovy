@@ -190,24 +190,27 @@ def updateKubeconfig() {
     }
 }
 
-// Step 12: deploys MySQL, the back and the front on EKS, then waits until the new versions are running.
-// Each build deploys its own image tags, which makes Kubernetes perform rolling updates.
-def deployToAwsKubernetes() {
+// Configures the cluster with Ansible (ansible/cluster.yml): namespace, StorageClass, MySQL Secret...
+// Ansible runs here, in the Jenkins container, and reaches the EKS API with the same kubeconfig and AWS keys as kubectl.
+// The MySQL user and password of the 'mysql-creds' credential are given as environment variables (never in git).
+def configureCluster() {
     withEks {
-        sh 'kubectl apply -f k8s/namespace.yaml -f k8s/storageclass.yaml'
-
-        // MySQL user and password from the 'mysql-creds' Jenkins credential, stored in a Kubernetes Secret (never in git)
         withCredentials([usernamePassword(credentialsId: 'mysql-creds',
                 usernameVariable: 'DB_USERNAME',
                 passwordVariable: 'DB_PASSWORD')]) {
-            sh '''
-                kubectl -n tpfoyer create secret generic mysql-credentials \
-                  --from-literal=username="$DB_USERNAME" \
-                  --from-literal=password="$DB_PASSWORD" \
-                  --dry-run=client -o yaml | kubectl apply -f -
-            '''
+            // ANSIBLE_CONFIG: use ansible.cfg even if the folder is world-writable (Ansible ignores it otherwise)
+            dir('ansible') {
+                sh 'ANSIBLE_CONFIG="$PWD/ansible.cfg" ansible-playbook cluster.yml'
+            }
         }
+    }
+}
 
+// Step 12: deploys MySQL, the back and the front on EKS, then waits until the new versions are running.
+// The namespace, the StorageClass and the MySQL Secret are created before by Ansible (configureCluster).
+// Each build deploys its own image tags, which makes Kubernetes perform rolling updates.
+def deployToAwsKubernetes() {
+    withEks {
         sh 'kubectl apply -f k8s/mysql.yaml'
         sh 'kubectl -n tpfoyer rollout status statefulset/mysql --timeout=5m'
 

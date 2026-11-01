@@ -201,6 +201,15 @@ pipeline {
                     }
                 }
 
+                // Ansible equips the cluster (namespace, StorageClass, MySQL Secret) before the application is deployed
+                stage('CONFIGURE CLUSTER') {
+                    steps {
+                        script {
+                            gv.configureCluster()
+                        }
+                    }
+                }
+
                 stage('DEPLOY TO AWS KUBERNETES') {
                     steps {
                         script {
