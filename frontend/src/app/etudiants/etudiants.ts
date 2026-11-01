@@ -1,5 +1,8 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { AbstractControl, NonNullableFormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
+import { forkJoin } from 'rxjs';
+import { Reservation } from '../reservations/reservation.model';
+import { ReservationService } from '../reservations/reservation.service';
 import { messageErreur } from '../shared/api-error';
 import { age, aujourdhuiIso, dateFr } from '../shared/age';
 import { couleurAvatar, initiales } from '../shared/avatar';
@@ -37,10 +40,12 @@ function dateNaissanceValide(controle: AbstractControl): ValidationErrors | null
 })
 export class Etudiants implements OnInit {
   private readonly service = inject(EtudiantService);
+  private readonly reservationService = inject(ReservationService);
   private readonly toasts = inject(ToastService);
   private readonly fb = inject(NonNullableFormBuilder);
 
   protected readonly etudiants = signal<Etudiant[]>([]);
+  protected readonly reservations = signal<Reservation[]>([]);
   protected readonly chargement = signal(true);
   protected readonly erreurChargement = signal<string | null>(null);
   protected readonly recherche = signal('');
@@ -64,6 +69,17 @@ export class Etudiants implements OnInit {
       ageMoyen: ages.length ? `${Math.round(ages.reduce((somme, a) => somme + a, 0) / ages.length)} ans` : '—',
       plusJeune: ages.length ? `${Math.min(...ages)} ans` : '—'
     };
+  });
+
+  // Etudiant.reservations is @JsonIgnore: the link is rebuilt from Reservation.etudiants
+  protected readonly reservationsParEtudiant = computed(() => {
+    const parEtudiant = new Map<number, string[]>();
+    for (const reservation of this.reservations()) {
+      for (const etudiant of reservation.etudiants ?? []) {
+        parEtudiant.set(etudiant.idEtudiant, [...(parEtudiant.get(etudiant.idEtudiant) ?? []), reservation.idReservation]);
+      }
+    }
+    return parEtudiant;
   });
 
   protected readonly formulaireOuvert = signal(false);
@@ -92,9 +108,10 @@ export class Etudiants implements OnInit {
   charger(): void {
     this.chargement.set(true);
     this.erreurChargement.set(null);
-    this.service.getAll().subscribe({
-      next: etudiants => {
+    forkJoin({ etudiants: this.service.getAll(), reservations: this.reservationService.getAll() }).subscribe({
+      next: ({ etudiants, reservations }) => {
         this.etudiants.set(etudiants);
+        this.reservations.set(reservations);
         this.chargement.set(false);
       },
       error: erreur => {
@@ -106,6 +123,10 @@ export class Etudiants implements OnInit {
 
   nomComplet(etudiant: Etudiant): string {
     return `${etudiant.prenomEtudiant} ${etudiant.nomEtudiant}`;
+  }
+
+  reservationsDe(etudiant: Etudiant): string[] {
+    return this.reservationsParEtudiant().get(etudiant.idEtudiant) ?? [];
   }
 
   rechercher(evenement: Event): void {

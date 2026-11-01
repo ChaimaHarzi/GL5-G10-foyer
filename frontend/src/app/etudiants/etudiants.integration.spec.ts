@@ -34,9 +34,10 @@ describe('Etudiants page (integration)', () => {
 
   afterEach(() => httpMock.verify());
 
-  function ouvrirLaPage(etudiants: unknown[]): void {
+  function ouvrirLaPage(etudiants: unknown[], reservations: unknown[] = []): void {
     fixture.detectChanges();
     httpMock.expectOne(`${api}/getAll`).flush(etudiants);
+    httpMock.expectOne('/tpFoyer17/api/reservations/getAll').flush(reservations);
     fixture.detectChanges();
   }
 
@@ -132,6 +133,22 @@ describe('Etudiants page (integration)', () => {
     fixture.detectChanges();
 
     expect(lignes()[0].textContent).toContain('Amine Ben Salah Jr');
+  });
+
+  it('shows the reservation of each etudiant, rebuilt from Reservation.etudiants', () => {
+    ouvrirLaPage([amine, sarra], [{ idReservation: '11Bloc A2026', anneeUniversitaire: '2026-10-01T09:00:00.000+00:00', estValide: true, etudiants: [amine] }]);
+
+    expect(texte(lignes()[0], 'reservation')).toBe('11Bloc A2026');
+    expect(texte(lignes()[1], 'reservation')).toBe('Aucune');
+  });
+
+  it('does not allow deleting an etudiant who has a reservation', () => {
+    ouvrirLaPage([amine, sarra], [{ idReservation: '11Bloc A2026', anneeUniversitaire: '2026-10-01T09:00:00.000+00:00', estValide: true, etudiants: [amine] }]);
+
+    const boutons = page.querySelectorAll<HTMLButtonElement>('button.supprimer');
+    expect(boutons[0].disabled).toBeTrue();
+    expect(boutons[0].title).toContain('réservations');
+    expect(boutons[1].disabled).toBeFalse();
   });
 
   it('keeps the etudiant and explains why when the back refuses the deletion (reservations)', () => {

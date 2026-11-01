@@ -1,0 +1,175 @@
+<header class="page-entete">
+  <div>
+    <h2>Réservations</h2>
+    <p class="sous-titre">Les étudiants logés dans chaque chambre pour l’année {{ anneeCourante }}.</p>
+  </div>
+  <button type="button" class="btn btn-primaire" data-test="ouvrir-ajout" (click)="ouvrirAjout()">
+    <app-icon nom="plus" /> Nouvelle réservation
+  </button>
+</header>
+
+<section class="stats" aria-label="Statistiques">
+  <app-stat-card [libelle]="'Réservations ' + anneeCourante" [valeur]="chargement() ? '—' : stats().reservations" icone="calendar" ton="primaire" />
+  <app-stat-card libelle="Étudiants logés" [valeur]="chargement() ? '—' : stats().loges" icone="users" ton="succes" />
+  <app-stat-card libelle="Places libres" [valeur]="chargement() ? '—' : stats().placesLibres" icone="bed" ton="alerte" />
+</section>
+
+<section class="carte">
+  <div class="barre-outils">
+    <label class="recherche">
+      <app-icon nom="search" />
+      <input type="search" name="recherche" placeholder="Rechercher par étudiant, CIN, bloc ou id…"
+             [value]="recherche()" (input)="rechercher($event)" aria-label="Rechercher une réservation" />
+    </label>
+    <div class="filtres" role="group" aria-label="Filtrer par statut">
+      @for (s of statuts; track s.valeur) {
+        <button type="button" class="filtre" [attr.data-statut]="s.valeur" [class.actif]="filtreStatut() === s.valeur"
+                [attr.aria-pressed]="filtreStatut() === s.valeur" (click)="filtrer(s.valeur)">{{ s.libelle }}</button>
+      }
+    </div>
+    @if (!chargement() && !erreurChargement()) {
+      <span class="compteur">{{ filtrees().length }} sur {{ reservations().length }}</span>
+    }
+  </div>
+
+  @if (chargement()) {
+    <div class="tableau-conteneur" aria-busy="true">
+      <table class="tableau">
+        <tbody>
+          @for (n of lignesSquelette; track n) {
+            <tr class="chargement">
+              <td><div class="squelette" style="width: 110px"></div></td>
+              <td><div class="squelette" style="width: 120px"></div></td>
+              <td><div class="cellule-nom"><div class="squelette rond"></div><div class="squelette" style="width: 130px"></div></div></td>
+              <td><div class="squelette" style="width: 90px"></div></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else if (erreurChargement()) {
+    <div class="etat" role="alert">
+      <span class="etat-icone erreur"><app-icon nom="alert" [taille]="28" /></span>
+      <h3>Chargement impossible</h3>
+      <p>{{ erreurChargement() }}</p>
+      <button type="button" class="btn btn-secondaire" data-test="reessayer" (click)="charger()">
+        <app-icon nom="refresh" /> Réessayer
+      </button>
+    </div>
+  } @else if (reservations().length === 0) {
+    <div class="etat" data-test="etat-vide">
+      <span class="etat-icone"><app-icon nom="calendar" [taille]="28" /></span>
+      <h3>Aucune réservation pour le moment</h3>
+      <p>Choisissez un étudiant et un bloc : le back lui attribue une chambre libre.</p>
+      <button type="button" class="btn btn-primaire" (click)="ouvrirAjout()">
+        <app-icon nom="plus" /> Réserver une chambre
+      </button>
+    </div>
+  } @else {
+    <div class="tableau-conteneur">
+      <table class="tableau">
+        <thead>
+          <tr><th>Réservation</th><th>Chambre</th><th>Occupants</th><th>Statut</th></tr>
+        </thead>
+        <tbody>
+          @for (l of filtrees(); track l.reservation.idReservation) {
+            <tr class="ligne">
+              <td>
+                <strong class="identifiant">{{ l.reservation.idReservation }}</strong>
+                <small class="sous-ligne">Année {{ l.annee ?? '—' }}</small>
+              </td>
+              <td data-test="chambre">
+                @if (l.emplacement; as e) {
+                  <strong>Chambre {{ e.chambre.numeroChambre }}</strong>
+                  <small class="sous-ligne">{{ e.bloc.nomBloc }} · {{ e.chambre.typeChambre }}</small>
+                } @else {
+                  <span class="badge badge-neutre">Chambre inconnue</span>
+                }
+              </td>
+              <td>
+                <div class="occupants">
+                  @for (et of l.occupants; track et.idEtudiant) {
+                    <span class="occupant">
+                      <span class="avatar petit" [style.background]="couleur(nomComplet(et))">{{ initiales(nomComplet(et)) }}</span>
+                      <span>{{ nomComplet(et) }}</span>
+                      @if (l.annee === anneeCourante) {
+                        <button type="button" class="btn-icone danger annuler" [attr.data-cin]="et.cinEtudiant"
+                                [attr.aria-label]="'Annuler la réservation de ' + nomComplet(et)" title="Annuler la réservation"
+                                (click)="demanderAnnulation(et, l.reservation)">
+                          <app-icon nom="x" [taille]="16" />
+                        </button>
+                      }
+                    </span>
+                  } @empty {
+                    <span class="aide">Aucun occupant</span>
+                  }
+                </div>
+              </td>
+              <td>
+                <span class="nombre" data-test="occupation">{{ l.occupants.length }}/{{ l.capacite ?? '?' }}</span>
+                @if (l.reservation.estValide) {
+                  <span class="badge badge-succes" data-test="statut">Places libres</span>
+                } @else {
+                  <span class="badge badge-alerte" data-test="statut">Complète</span>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="4" class="aucun-resultat">Aucune réservation ne correspond à ces critères.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>
+
+@if (formulaireOuvert()) {
+  <app-modal titre="Nouvelle réservation" (fermer)="fermerFormulaire()">
+    <form [formGroup]="formulaire" (ngSubmit)="reserver()">
+      <label class="champ">
+        <span>Étudiant</span>
+        <select name="cinEtudiant" formControlName="cinEtudiant" [class.invalide]="champInvalide('cinEtudiant')">
+          <option [ngValue]="null">Choisir un étudiant…</option>
+          @for (e of etudiantsDisponibles(); track e.idEtudiant) {
+            <option [ngValue]="e.cinEtudiant">{{ nomComplet(e) }} · CIN {{ cin(e.cinEtudiant) }}</option>
+          }
+        </select>
+        @if (champInvalide('cinEtudiant')) {
+          <small class="erreur-champ">Choisissez un étudiant.</small>
+        }
+        <small class="aide">Seuls les étudiants sans réservation en {{ anneeCourante }} sont proposés.</small>
+      </label>
+      <label class="champ">
+        <span>Bloc</span>
+        <select name="idBloc" formControlName="idBloc" [class.invalide]="champInvalide('idBloc')">
+          <option [ngValue]="null">Choisir un bloc…</option>
+          @for (b of blocsReservables(); track b.idBloc) {
+            <option [ngValue]="b.idBloc">{{ b.nomBloc }} ({{ b.chambres?.length }} chambre(s))</option>
+          }
+        </select>
+        @if (champInvalide('idBloc')) {
+          <small class="erreur-champ">Choisissez un bloc.</small>
+        }
+        <small class="aide">Le back choisit la chambre : une réservation du bloc qui a encore de la place, sinon la première chambre libre.</small>
+      </label>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondaire" (click)="fermerFormulaire()">Fermer</button>
+        <button type="submit" class="btn btn-primaire" [disabled]="enregistrement()">
+          {{ enregistrement() ? 'Réservation…' : 'Réserver' }}
+        </button>
+      </div>
+    </form>
+  </app-modal>
+}
+
+@if (aAnnuler(); as choix) {
+  <app-confirm-dialog
+    titre="Annuler la réservation"
+    [message]="messageAnnulation(choix.etudiant, choix.reservation)"
+    libelleConfirmer="Annuler la réservation"
+    libelleEnCours="Annulation…"
+    icone="x"
+    [enCours]="annulation()"
+    (confirmer)="confirmerAnnulation()"
+    (annuler)="abandonnerAnnulation()" />
+}

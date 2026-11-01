@@ -21,13 +21,13 @@ export class App {
   private readonly router = inject(Router);
 
   protected readonly menu: EntreeMenu[] = [
-    { libelle: 'Tableau de bord', icone: 'dashboard', lien: null },
+    { libelle: 'Tableau de bord', icone: 'dashboard', lien: '/tableau-de-bord' },
     { libelle: 'Universités', icone: 'university', lien: '/universites' },
     { libelle: 'Foyers', icone: 'home', lien: '/foyers' },
     { libelle: 'Blocs', icone: 'blocks', lien: '/blocs' },
     { libelle: 'Chambres', icone: 'door', lien: '/chambres' },
     { libelle: 'Étudiants', icone: 'users', lien: '/etudiants' },
-    { libelle: 'Réservations', icone: 'calendar', lien: null }
+    { libelle: 'Réservations', icone: 'calendar', lien: '/reservations' }
   ];
 
   // Mobile only: the sidebar slides in over the page

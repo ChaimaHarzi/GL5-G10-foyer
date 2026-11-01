@@ -36,6 +36,7 @@
               <td><div class="squelette" style="width: 80px"></div></td>
               <td><div class="squelette" style="width: 90px"></div></td>
               <td><div class="squelette" style="width: 50px"></div></td>
+              <td><div class="squelette" style="width: 90px"></div></td>
               <td></td>
             </tr>
           }
@@ -64,7 +65,7 @@
     <div class="tableau-conteneur">
       <table class="tableau">
         <thead>
-          <tr><th>Étudiant</th><th>CIN</th><th>Date de naissance</th><th>Âge</th><th class="actions">Actions</th></tr>
+          <tr><th>Étudiant</th><th>CIN</th><th>Date de naissance</th><th>Âge</th><th>Réservation</th><th class="actions">Actions</th></tr>
         </thead>
         <tbody>
           @for (e of filtrees(); track e.idEtudiant) {
@@ -86,17 +87,27 @@
                 <td data-test="date"><span class="badge badge-neutre">Non renseignée</span></td>
                 <td data-test="age">—</td>
               }
+              @let reservations = reservationsDe(e);
+              <td data-test="reservation">
+                @if (reservations.length) {
+                  <span class="badge badge-succes">{{ reservations.join(', ') }}</span>
+                } @else {
+                  <span class="badge badge-neutre">Aucune</span>
+                }
+              </td>
               <td class="actions">
                 <button type="button" class="btn-icone modifier" [attr.aria-label]="'Modifier ' + nomComplet(e)" (click)="ouvrirModification(e)">
                   <app-icon nom="edit" />
                 </button>
-                <button type="button" class="btn-icone danger supprimer" [attr.aria-label]="'Supprimer ' + nomComplet(e)" (click)="demanderSuppression(e)">
+                <button type="button" class="btn-icone danger supprimer" [disabled]="reservations.length > 0"
+                        [attr.title]="reservations.length > 0 ? 'Annulez d’abord ses réservations' : null"
+                        [attr.aria-label]="'Supprimer ' + nomComplet(e)" (click)="demanderSuppression(e)">
                   <app-icon nom="trash" />
                 </button>
               </td>
             </tr>
           } @empty {
-            <tr><td colspan="5" class="aucun-resultat">Aucun étudiant ne correspond à « {{ recherche() }} ».</td></tr>
+            <tr><td colspan="6" class="aucun-resultat">Aucun étudiant ne correspond à « {{ recherche() }} ».</td></tr>
           }
         </tbody>
       </table>

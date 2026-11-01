@@ -190,7 +190,7 @@ button, input { font: inherit; color: inherit; }
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   height: 40px; padding: 0 16px; border: 1px solid transparent; border-radius: var(--radius-sm);
-  font-size: .9rem; font-weight: 600; cursor: pointer;
+  font-size: .9rem; font-weight: 600; cursor: pointer; text-decoration: none;
   transition: background .15s, border-color .15s, box-shadow .15s, transform .05s;
 }
 
@@ -234,6 +234,26 @@ button, input { font: inherit; color: inherit; }
 .ton-alerte { background: var(--warning-soft); color: var(--warning); }
 .stat-libelle { font-size: .82rem; font-weight: 500; color: var(--text-2); }
 .stat-valeur { font-size: 1.6rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.2; }
+
+/* ---------- Dashboard panels and bars ---------- */
+
+.grille-tableau { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 16px; }
+.panneau { display: flex; flex-direction: column; gap: 14px; padding: 20px 22px; }
+.panneau h3 { font-size: 1rem; }
+.panneau-entete { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.chiffre-cle { font-size: 2.4rem; font-weight: 700; letter-spacing: -.03em; line-height: 1; }
+.lien-panneau { align-self: flex-start; color: var(--primary); font-size: .88rem; font-weight: 600; text-decoration: none; }
+.lien-panneau:hover { text-decoration: underline; }
+
+/* Track + fill: one hue (the primary), thin, rounded ends; the value is always written next to it */
+.piste { display: block; flex: 1; height: 10px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); overflow: hidden; }
+.remplissage { display: block; height: 100%; border-radius: 999px; background: var(--primary); transition: width .4s ease; }
+.barres { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.barre { display: grid; grid-template-columns: 90px 1fr 48px; align-items: center; gap: 12px; padding: 2px 0; }
+.barre:hover .remplissage { background: var(--primary-hover); }
+.barre-libelle { overflow: hidden; color: var(--text-2); font-size: .85rem; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.barre-valeur { font-size: .85rem; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+.liste-etudiants { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
 
 /* ---------- Toolbar and search ---------- */
 
@@ -291,6 +311,18 @@ button, input { font: inherit; color: inherit; }
 .badge-info { background: var(--primary-soft); color: var(--primary); }
 .badge-alerte { background: var(--warning-soft); color: var(--warning); }
 .avatar-icone { background: var(--primary-soft); color: var(--primary); }
+.avatar.petit { width: 28px; height: 28px; border-radius: 8px; font-size: .68rem; }
+.identifiant { display: block; font-weight: 600; font-variant-numeric: tabular-nums; }
+.sous-ligne { display: block; color: var(--text-3); font-size: .78rem; }
+
+/* People in a reservation */
+.occupants { display: flex; flex-wrap: wrap; gap: 6px; }
+.occupant {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 3px 4px 3px 3px; border: 1px solid var(--border); border-radius: 10px; font-size: .85rem;
+}
+.occupant .btn-icone { width: 26px; height: 26px; }
+td .nombre + .badge { margin-left: 8px; }
 .nombre { font-weight: 600; font-variant-numeric: tabular-nums; }
 .nombre small { margin-left: 4px; font-weight: 400; color: var(--text-3); }
 .aucun-resultat { padding: 32px 20px; text-align: center; color: var(--text-3); }

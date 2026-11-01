@@ -1,0 +1,112 @@
+<header class="page-entete">
+  <div>
+    <h2>Tableau de bord</h2>
+    <p class="sous-titre">Vue d’ensemble des foyers et de leur occupation en {{ anneeCourante }}.</p>
+  </div>
+  <a class="btn btn-primaire" routerLink="/reservations">
+    <app-icon nom="calendar" /> Gérer les réservations
+  </a>
+</header>
+
+@if (erreurChargement()) {
+  <section class="carte">
+    <div class="etat" role="alert">
+      <span class="etat-icone erreur"><app-icon nom="alert" [taille]="28" /></span>
+      <h3>Chargement impossible</h3>
+      <p>{{ erreurChargement() }}</p>
+      <button type="button" class="btn btn-secondaire" data-test="reessayer" (click)="charger()">
+        <app-icon nom="refresh" /> Réessayer
+      </button>
+    </div>
+  </section>
+} @else {
+  <section class="stats" aria-label="Indicateurs">
+    <app-stat-card libelle="Universités" [valeur]="chargement() ? '—' : kpi().universites" icone="university" ton="primaire" />
+    <app-stat-card libelle="Foyers" [valeur]="chargement() ? '—' : kpi().foyers" icone="home" ton="primaire" />
+    <app-stat-card libelle="Blocs" [valeur]="chargement() ? '—' : kpi().blocs" icone="blocks" ton="primaire" />
+    <app-stat-card libelle="Chambres" [valeur]="chargement() ? '—' : kpi().chambres" icone="door" ton="succes" />
+    <app-stat-card libelle="Étudiants" [valeur]="chargement() ? '—' : kpi().etudiants" icone="users" ton="succes" />
+    <app-stat-card [libelle]="'Réservations ' + anneeCourante" [valeur]="chargement() ? '—' : kpi().reservations" icone="calendar" ton="alerte" />
+  </section>
+
+  <div class="grille-tableau">
+    <section class="carte panneau">
+      <h3>Taux d’occupation</h3>
+      @if (chargement()) {
+        <div class="squelette" style="height: 48px"></div>
+      } @else {
+        <p class="chiffre-cle" data-test="taux">{{ occupation().taux }} %</p>
+        <div class="piste" role="meter" aria-label="Taux d’occupation" aria-valuemin="0" aria-valuemax="100"
+             [attr.aria-valuenow]="occupation().taux" [title]="occupation().occupees + ' / ' + occupation().places + ' places'">
+          <span class="remplissage" [style.width.%]="occupation().taux"></span>
+        </div>
+        <p class="aide" data-test="places">{{ occupation().occupees }} place(s) occupée(s) sur {{ occupation().places }}</p>
+      }
+    </section>
+
+    <section class="carte panneau">
+      <h3>Chambres par type</h3>
+      @if (chargement()) {
+        <div class="squelette" style="height: 90px"></div>
+      } @else {
+        <ul class="barres" data-test="par-type">
+          @for (b of parType(); track b.libelle) {
+            <li class="barre" [title]="b.detail">
+              <span class="barre-libelle">{{ b.libelle }}</span>
+              <span class="piste"><span class="remplissage" [style.width.%]="b.largeur"></span></span>
+              <span class="barre-valeur">{{ b.valeur }}</span>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+
+    <section class="carte panneau">
+      <h3>Occupation par bloc</h3>
+      @if (chargement()) {
+        <div class="squelette" style="height: 90px"></div>
+      } @else if (parBloc().length === 0) {
+        <p class="aide">Aucun bloc ne contient encore de chambre. <a routerLink="/blocs">Affecter des chambres</a></p>
+      } @else {
+        <ul class="barres" data-test="par-bloc">
+          @for (b of parBloc(); track b.libelle) {
+            <li class="barre" [title]="b.detail">
+              <span class="barre-libelle">{{ b.libelle }}</span>
+              <span class="piste"><span class="remplissage" [style.width.%]="b.largeur"></span></span>
+              <span class="barre-valeur">{{ b.valeur }} %</span>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+
+    <section class="carte panneau">
+      <div class="panneau-entete">
+        <h3>Sans réservation en {{ anneeCourante }}</h3>
+        @if (!chargement()) {
+          <span class="badge badge-info" data-test="nb-sans-reservation">{{ sansReservation().length }}</span>
+        }
+      </div>
+      @if (chargement()) {
+        <div class="squelette" style="height: 90px"></div>
+      } @else if (sansReservation().length === 0) {
+        <p class="aide">Tous les étudiants ont une chambre cette année.</p>
+      } @else {
+        <ul class="liste-etudiants">
+          @for (e of etudiantsAffiches(); track e.idEtudiant) {
+            <li class="cellule-nom">
+              <span class="avatar petit" [style.background]="couleur(nomComplet(e))">{{ initiales(nomComplet(e)) }}</span>
+              <div>
+                <strong>{{ nomComplet(e) }}</strong>
+                <small>CIN {{ cin(e.cinEtudiant) }}</small>
+              </div>
+            </li>
+          }
+        </ul>
+        <a class="lien-panneau" routerLink="/reservations">
+          {{ sansReservation().length > etudiantsAffiches().length ? 'Voir les ' + sansReservation().length + ' étudiants et réserver' : 'Leur réserver une chambre' }}
+        </a>
+      }
+    </section>
+  </div>
+}
