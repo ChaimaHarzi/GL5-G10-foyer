@@ -64,15 +64,19 @@ spec:
 ---
 # Internal only (ClusterIP): the Nginx pods of the front call http://tpfoyer:8082.
 # The API and Swagger are reached from Internet through the load balancer of the front.
+# The label and the port name are used by the ServiceMonitor (k8s/servicemonitor.yaml) to find the pods to scrape.
 apiVersion: v1
 kind: Service
 metadata:
   name: tpfoyer
   namespace: tpfoyer
+  labels:
+    app: tpfoyer
 spec:
   type: ClusterIP
   selector:
     app: tpfoyer
   ports:
-    - port: 8082
+    - name: http
+      port: 8082
       targetPort: 8082

@@ -1,0 +1,88 @@
+# Settings of the kube-prometheus-stack chart for the tpFoyer cluster (2 t3.medium nodes): small and simple.
+
+# No alerts are sent for now
+alertmanager:
+  enabled: false
+
+# Parts of the control plane managed by AWS on EKS: Prometheus cannot reach them, they would only show as "down"
+kubeEtcd:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
+
+prometheus:
+  prometheusSpec:
+    retention: 2d
+    # Read every ServiceMonitor of the cluster, not only those of this chart (ours is in the namespace tpfoyer)
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    # No disk: the metrics stay in the pod (lost if it restarts, enough for the project)
+    resources:
+      requests:
+        cpu: 100m
+        memory: 400Mi
+      limits:
+        memory: 1Gi
+
+prometheusOperator:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
+kube-state-metrics:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
+
+prometheus-node-exporter:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 64Mi
+
+grafana:
+  # Login read from the Secret created by Ansible (credential 'grafana-admin' of Jenkins): never in git
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+  # Public address (AWS load balancer), protected by the login above
+  service:
+    type: LoadBalancer
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+  # Dashboards of Kubernetes come with the chart; the JVM dashboard of the back is downloaded from grafana.com
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: tpfoyer
+          orgId: 1
+          folder: tpFoyer
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/tpfoyer
+  dashboards:
+    tpfoyer:
+      jvm-micrometer:
+        gnetId: 4701
+        revision: 10
+        datasource: Prometheus

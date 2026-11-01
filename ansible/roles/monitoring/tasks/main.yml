@@ -1,0 +1,67 @@
+# Monitoring of the cluster: Prometheus (collects the metrics) and Grafana (shows them),
+# installed with Helm from the kube-prometheus-stack chart.
+
+# Login of the 'grafana-admin' Jenkins credential, given as environment variables by the Jenkins stage
+- name: The Grafana admin login is given by Jenkins
+  ansible.builtin.assert:
+    that:
+      - lookup('ansible.builtin.env', 'GRAFANA_ADMIN_USER') | length > 0
+      - lookup('ansible.builtin.env', 'GRAFANA_ADMIN_PASSWORD') | length > 0
+    fail_msg: GRAFANA_ADMIN_USER and GRAFANA_ADMIN_PASSWORD are empty (Jenkins credential 'grafana-admin')
+    quiet: true
+
+- name: The Helm repository of the Prometheus community is known
+  kubernetes.core.helm_repository:
+    name: prometheus-community
+    repo_url: "{{ monitoring_repo_url }}"
+
+- name: The namespace of the monitoring exists
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ monitoring_namespace }}"
+
+- name: The Grafana admin login is stored in a Secret
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: "{{ monitoring_grafana_secret }}"
+        namespace: "{{ monitoring_namespace }}"
+      type: Opaque
+      stringData:
+        admin-user: "{{ lookup('ansible.builtin.env', 'GRAFANA_ADMIN_USER') }}"
+        admin-password: "{{ lookup('ansible.builtin.env', 'GRAFANA_ADMIN_PASSWORD') }}"
+  no_log: true
+
+# Installs the chart the first time, then upgrades it only when the version or the values change
+- name: Prometheus and Grafana are installed (kube-prometheus-stack)
+  kubernetes.core.helm:
+    name: "{{ monitoring_release }}"
+    chart_ref: "{{ monitoring_chart }}"
+    chart_version: "{{ monitoring_chart_version }}"
+    release_namespace: "{{ monitoring_namespace }}"
+    values_files:
+      - "{{ role_path }}/files/values.yaml"
+    update_repo_cache: true
+    wait: true
+    wait_timeout: 10m
+
+- name: The load balancer of Grafana has its public address
+  kubernetes.core.k8s_info:
+    kind: Service
+    name: "{{ monitoring_release }}-grafana"
+    namespace: "{{ monitoring_namespace }}"
+  register: monitoring_grafana_service
+  until: monitoring_grafana_service.resources[0].status.loadBalancer.ingress[0].hostname is defined
+  retries: 30
+  delay: 10
+
+- name: Show the address of Grafana
+  ansible.builtin.debug:
+    msg: "Grafana: http://{{ monitoring_grafana_service.resources[0].status.loadBalancer.ingress[0].hostname }}/"

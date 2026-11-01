@@ -1,0 +1,11 @@
+# Namespace of Prometheus and Grafana (separate from the application)
+monitoring_namespace: monitoring
+
+# Helm release and chart (version pinned: every build installs exactly the same thing)
+monitoring_release: monitoring
+monitoring_chart: prometheus-community/kube-prometheus-stack
+monitoring_chart_version: "92.16.2"
+monitoring_repo_url: https://prometheus-community.github.io/helm-charts
+
+# Secret holding the Grafana admin login (keys expected by the Grafana chart)
+monitoring_grafana_secret: grafana-admin

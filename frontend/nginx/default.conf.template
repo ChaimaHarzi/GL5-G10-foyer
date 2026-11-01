@@ -11,6 +11,11 @@ server {
         return 200 'ok';
     }
 
+    # Metrics and health of the back: read by Prometheus inside the cluster, never shown on Internet
+    location /tpFoyer17/actuator/ {
+        return 404;
+    }
+
     # API and Swagger: forwarded to the back (in production, this replaces proxy.conf.json of "ng serve").
     # The browser only talks to the front: same origin, no CORS.
     location /tpFoyer17/ {

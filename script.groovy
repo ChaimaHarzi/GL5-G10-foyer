@@ -162,11 +162,11 @@ def setupTerraform() {
         dir('terraform') {
             sh 'terraform init -input=false -reconfigure -backend-config="bucket=$TF_STATE_BUCKET"'
             if (params.TF_ACTION == 'destroy') {
-                // The load balancer and the MySQL disk are created by Kubernetes, not by Terraform:
-                // delete the application first, so AWS removes them before Terraform deletes the network.
+                // The load balancers (front, Grafana) and the MySQL disk are created by Kubernetes, not by Terraform:
+                // delete the application and the monitoring first, so AWS removes them before Terraform deletes the network.
                 sh '''
                     if terraform output -raw kubeconfig > "$KUBECONFIG" 2>/dev/null; then
-                      kubectl delete namespace tpfoyer --ignore-not-found --timeout=10m
+                      kubectl delete namespace tpfoyer monitoring --ignore-not-found --timeout=10m
                       kubectl wait --for=delete pv --all --timeout=5m || true
                     fi
                 '''
@@ -190,14 +190,20 @@ def updateKubeconfig() {
     }
 }
 
-// Configures the cluster with Ansible (ansible/cluster.yml): namespace, StorageClass, MySQL Secret...
+// Configures the cluster with Ansible (ansible/cluster.yml): namespace, StorageClass, MySQL Secret,
+// then Prometheus and Grafana (role monitoring).
 // Ansible runs here, in the Jenkins container, and reaches the EKS API with the same kubeconfig and AWS keys as kubectl.
-// The MySQL user and password of the 'mysql-creds' credential are given as environment variables (never in git).
+// The logins of the 'mysql-creds' and 'grafana-admin' credentials are given as environment variables (never in git).
 def configureCluster() {
     withEks {
-        withCredentials([usernamePassword(credentialsId: 'mysql-creds',
-                usernameVariable: 'DB_USERNAME',
-                passwordVariable: 'DB_PASSWORD')]) {
+        withCredentials([
+                usernamePassword(credentialsId: 'mysql-creds',
+                        usernameVariable: 'DB_USERNAME',
+                        passwordVariable: 'DB_PASSWORD'),
+                usernamePassword(credentialsId: 'grafana-admin',
+                        usernameVariable: 'GRAFANA_ADMIN_USER',
+                        passwordVariable: 'GRAFANA_ADMIN_PASSWORD')
+        ]) {
             // ANSIBLE_CONFIG: use ansible.cfg even if the folder is world-writable (Ansible ignores it otherwise)
             dir('ansible') {
                 sh 'ANSIBLE_CONFIG="$PWD/ansible.cfg" ansible-playbook cluster.yml'
@@ -218,6 +224,9 @@ def deployToAwsKubernetes() {
         sh "sed 's|__IMAGE__|${env.IMAGE_NAME}:${env.BUILD_NUMBER}|' k8s/app.yaml | kubectl apply -f -"
         sh 'kubectl -n tpfoyer rollout status deployment/tpfoyer --timeout=10m'
 
+        // Prometheus reads the metrics of the back (the ServiceMonitor type comes with the chart installed by Ansible)
+        sh 'kubectl apply -f k8s/servicemonitor.yaml'
+
         // The front after the back: at start-up, Nginx resolves the Service "tpfoyer" of its proxy_pass
         sh "sed 's|__IMAGE__|${env.FRONT_IMAGE_NAME}:${env.BUILD_NUMBER}|' k8s/front.yaml | kubectl apply -f -"
         sh 'kubectl -n tpfoyer rollout status deployment/tpfoyer-front --timeout=5m'
@@ -233,6 +242,8 @@ def deployToAwsKubernetes() {
             done
             echo "Application: http://$HOST/"
             echo "Swagger:     http://$HOST/tpFoyer17/swagger-ui/index.html"
+            GRAFANA=$(kubectl -n monitoring get svc monitoring-grafana -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+            echo "Grafana:     http://$GRAFANA/   (login: Jenkins credential grafana-admin)"
         '''
     }
 }

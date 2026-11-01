@@ -1,0 +1,18 @@
+# Tells Prometheus (installed by Ansible, namespace "monitoring") to read the metrics of the back.
+# ServiceMonitor is a type added by the kube-prometheus-stack chart: apply this file after the chart is installed.
+# Prometheus finds the pods behind the Service "tpfoyer" and reads each of them every 30 seconds.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: tpfoyer
+  namespace: tpfoyer
+  labels:
+    app: tpfoyer
+spec:
+  selector:
+    matchLabels:
+      app: tpfoyer
+  endpoints:
+    - port: http
+      path: /tpFoyer17/actuator/prometheus
+      interval: 30s

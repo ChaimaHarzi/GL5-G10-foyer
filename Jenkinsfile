@@ -201,7 +201,8 @@ pipeline {
                     }
                 }
 
-                // Ansible equips the cluster (namespace, StorageClass, MySQL Secret) before the application is deployed
+                // Ansible equips the cluster (namespace, StorageClass, MySQL Secret, Prometheus + Grafana)
+                // before the application is deployed
                 stage('CONFIGURE CLUSTER') {
                     steps {
                         script {
