@@ -1,0 +1,48 @@
+<h1>Universités</h1>
+<p class="lead">Les universités et le foyer qui leur est affecté.</p>
+
+<app-crud-page [config]="config" [service]="service" (changed)="loadChoices()" />
+
+<section class="card">
+  <h2>Affecter un foyer à une université</h2>
+  <form [formGroup]="affectation" (ngSubmit)="affecter()" class="form-grid">
+    <label>
+      <span>Université</span>
+      <select formControlName="nomUniversite" name="nomUniversite">
+        @for (universite of universites(); track universite.idUniversite) {
+          <option [ngValue]="universite.nomUniversite">{{ universite.nomUniversite }}</option>
+        }
+      </select>
+    </label>
+    <label>
+      <span>Foyer</span>
+      <select formControlName="idFoyer" name="idFoyer">
+        @for (foyer of foyers(); track foyer.idFoyer) {
+          <option [ngValue]="foyer.idFoyer">{{ foyer.nomFoyer }}</option>
+        }
+      </select>
+    </label>
+    <div class="form-actions">
+      <button type="submit" class="primary" [disabled]="affectation.invalid">Affecter</button>
+    </div>
+  </form>
+
+  <h2>Retirer le foyer d’une université</h2>
+  <div class="form-grid">
+    <label>
+      <span>Université</span>
+      <select [formControl]="desaffectation" name="desaffectation">
+        @for (universite of universites(); track universite.idUniversite) {
+          <option [ngValue]="universite.idUniversite">{{ universite.nomUniversite }}</option>
+        }
+      </select>
+    </label>
+    <div class="form-actions">
+      <button type="button" (click)="desaffecter()" [disabled]="desaffectation.invalid">Retirer</button>
+    </div>
+  </div>
+</section>
+
+@if (error(); as message) {
+  <p class="error" role="alert">{{ message }}</p>
+}

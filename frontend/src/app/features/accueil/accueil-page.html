@@ -1,0 +1,26 @@
+<h1>Gestion des foyers universitaires</h1>
+<p class="lead">
+  Interface Angular de l’API Spring Boot tpFoyer : universités, foyers, blocs, chambres, étudiants et réservations.
+</p>
+
+<div class="stats">
+  @for (stat of stats(); track stat.path) {
+    <a class="card stat" [routerLink]="stat.path">
+      <span class="stat-value">{{ stat.count ?? '–' }}</span>
+      <span class="stat-label">{{ stat.label }}</span>
+    </a>
+  }
+</div>
+
+<section class="card">
+  <h2>Pour commencer</h2>
+  <ol class="steps">
+    <li>Créer une université et un foyer, puis affecter le foyer à l’université.</li>
+    <li>Créer des chambres et un bloc, puis ranger les chambres dans le bloc.</li>
+    <li>Créer des étudiants, puis leur réserver une place dans le bloc.</li>
+  </ol>
+  <p class="muted">
+    Documentation de l’API :
+    <a href="/tpFoyer17/swagger-ui/index.html" target="_blank" rel="noopener">Swagger UI</a>
+  </p>
+</section>

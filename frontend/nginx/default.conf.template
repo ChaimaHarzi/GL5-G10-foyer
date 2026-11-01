@@ -1,0 +1,31 @@
+# Nginx configuration of the frontend. ${BACKEND_URL} is replaced when the container starts.
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    gzip on;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+
+    # API calls (and Swagger) go to the Spring Boot backend: the browser only sees one address, so no CORS is needed
+    location /tpFoyer17/ {
+        proxy_pass ${BACKEND_URL};
+        # $http_host keeps the port the browser used, so Swagger builds the right "Try it out" URLs
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # index.html must never be cached, so a new deployment is seen at once
+    location = /index.html {
+        add_header Cache-Control "no-cache";
+    }
+
+    # Angular routes (/foyers, /blocs...) exist only in the browser: unknown paths return index.html
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

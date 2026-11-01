@@ -70,7 +70,13 @@ def buildImage() {
     sh "docker build -t ${env.IMAGE_NAME}:${env.BUILD_NUMBER} -t ${env.IMAGE_NAME}:latest ."
 }
 
-// Docker Hub: logs in with the 'docker-hub-repo' credential and pushes both tags.
+// Docker: builds the Angular frontend image (frontend/Dockerfile). Node installs, tests and builds Angular
+// inside "docker build", then Nginx serves the files: the build stops here if an Angular test fails.
+def buildFrontendImage() {
+    sh "docker build -t ${env.FRONTEND_IMAGE_NAME}:${env.BUILD_NUMBER} -t ${env.FRONTEND_IMAGE_NAME}:latest frontend"
+}
+
+// Docker Hub: logs in with the 'docker-hub-repo' credential and pushes both tags of both images.
 def deployImage() {
     withCredentials([usernamePassword(credentialsId: 'docker-hub-repo',
             usernameVariable: 'DOCKER_USER',
@@ -78,6 +84,8 @@ def deployImage() {
         sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
         sh "docker push ${env.IMAGE_NAME}:${env.BUILD_NUMBER}"
         sh "docker push ${env.IMAGE_NAME}:latest"
+        sh "docker push ${env.FRONTEND_IMAGE_NAME}:${env.BUILD_NUMBER}"
+        sh "docker push ${env.FRONTEND_IMAGE_NAME}:latest"
     }
     sh 'docker logout'
 }
@@ -142,7 +150,7 @@ def updateKubeconfig() {
     }
 }
 
-// Step 12: deploys MySQL and the application on EKS, then waits until the new version is running.
+// Step 12: deploys MySQL, the API and the Angular frontend on EKS, then waits until the new version is running.
 // Each build deploys its own image tag, which makes Kubernetes perform a rolling update.
 def deployToAwsKubernetes() {
     withEks {
@@ -167,15 +175,20 @@ def deployToAwsKubernetes() {
         sh "sed 's|__IMAGE__|${env.IMAGE_NAME}:${env.BUILD_NUMBER}|' k8s/app.yaml | kubectl apply -f -"
         sh 'kubectl -n tpfoyer rollout status deployment/tpfoyer --timeout=10m'
 
+        // __FRONTEND_IMAGE__ in frontend.yaml becomes the frontend image pushed by this build
+        sh "sed 's|__FRONTEND_IMAGE__|${env.FRONTEND_IMAGE_NAME}:${env.BUILD_NUMBER}|' k8s/frontend.yaml | kubectl apply -f -"
+        sh 'kubectl -n tpfoyer rollout status deployment/tpfoyer-frontend --timeout=5m'
+
         sh 'kubectl -n tpfoyer get pods,svc'
-        // The AWS load balancer gets its public address a few seconds after the Service is created
+        // The AWS load balancer (in front of the frontend) gets its public address a few seconds after the Service is created
         sh '''
             for i in $(seq 1 30); do
-              HOST=$(kubectl -n tpfoyer get svc tpfoyer -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+              HOST=$(kubectl -n tpfoyer get svc tpfoyer-frontend -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
               [ -n "$HOST" ] && break
               sleep 10
             done
-            echo "Application: http://$HOST/tpFoyer17/swagger-ui/index.html"
+            echo "Application: http://$HOST/"
+            echo "API (Swagger): http://$HOST/tpFoyer17/swagger-ui/index.html"
         '''
     }
 }
