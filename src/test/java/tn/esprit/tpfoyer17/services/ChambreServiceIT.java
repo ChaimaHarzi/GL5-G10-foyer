@@ -7,14 +7,16 @@ import org.springframework.transaction.annotation.Transactional;
 import tn.esprit.tpfoyer17.entities.Bloc;
 import tn.esprit.tpfoyer17.entities.Chambre;
 import tn.esprit.tpfoyer17.entities.Foyer;
+import tn.esprit.tpfoyer17.entities.Reservation;
 import tn.esprit.tpfoyer17.entities.Universite;
 import tn.esprit.tpfoyer17.entities.enumerations.TypeChambre;
 import tn.esprit.tpfoyer17.repositories.BlocRepository;
+import tn.esprit.tpfoyer17.repositories.ChambreRepository;
 import tn.esprit.tpfoyer17.repositories.FoyerRepository;
+import tn.esprit.tpfoyer17.repositories.ReservationRepository;
 import tn.esprit.tpfoyer17.repositories.UniversiteRepository;
 
-import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -38,6 +40,12 @@ class ChambreServiceIT {
 
     @Autowired
     UniversiteRepository universiteRepository;
+
+    @Autowired
+    ChambreRepository chambreRepository;
+
+    @Autowired
+    ReservationRepository reservationRepository;
 
     /** Creates Universite -> Foyer -> Bloc, the hierarchy a Chambre belongs to. */
     private Bloc createBlocInUniversite(String nomUniversite) {
@@ -135,14 +143,28 @@ class ChambreServiceIT {
                 chambreService.getChambresParBlocEtTypeJPQL(bloc.getIdBloc(), TypeChambre.TRIPLE).size());
     }
 
+    /** A room of the bloc holding one reservation dated on the given day. */
+    private void chambreReservee(Bloc bloc, long numero, String idReservation, Date anneeUniversitaire) {
+        Reservation reservation = reservationRepository.save(
+                Reservation.builder().idReservation(idReservation).anneeUniversitaire(anneeUniversitaire).build());
+        chambreService.addChambre(Chambre.builder().numeroChambre(numero).typeChambre(TypeChambre.SIMPLE).bloc(bloc)
+                .reservations(new HashSet<>(Set.of(reservation))).build());
+    }
+
     @Test
-    void getChambresNonReserveParNomUniversiteEtTypeChambre_noReservations_returnsEmpty() {
+    void chambresNonReservees_includeNeverReservedAndLastYearRooms_excludeRoomsReservedThisYear() {
         Bloc bloc = createBlocInUniversite("ESPRIT");
         chambreService.addChambre(Chambre.builder().numeroChambre(101).typeChambre(TypeChambre.SIMPLE).bloc(bloc).build());
+        chambreReservee(bloc, 102, "R-THIS-YEAR", new Date());
+        chambreReservee(bloc, 103, "R-2020", new GregorianCalendar(2020, Calendar.SEPTEMBER, 1).getTime());
 
-        List<Chambre> result =
-                chambreService.getChambresNonReserveParNomUniversiteEtTypeChambre("ESPRIT", TypeChambre.SIMPLE);
+        List<Long> parUniversite = chambreService
+                .getChambresNonReserveParNomUniversiteEtTypeChambre("ESPRIT", TypeChambre.SIMPLE)
+                .stream().map(Chambre::getNumeroChambre).sorted().toList();
+        List<Long> toutes = chambreRepository.getChambresNonReserve()
+                .stream().map(Chambre::getNumeroChambre).sorted().toList();
 
-        assertTrue(result.isEmpty());
+        assertEquals(List.of(101L, 103L), parUniversite);
+        assertEquals(List.of(101L, 103L), toutes);
     }
 }

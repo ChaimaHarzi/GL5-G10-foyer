@@ -12,8 +12,11 @@ import tn.esprit.tpfoyer17.entities.Chambre;
 import tn.esprit.tpfoyer17.entities.enumerations.TypeChambre;
 import tn.esprit.tpfoyer17.services.IChambreService;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -69,5 +72,15 @@ class ChambreControllerTest {
 
         assertEquals(TypeChambre.TRIPLE, existing.getTypeChambre());
         assertSame(bloc, existing.getBloc());
+    }
+
+    @Test
+    void getChambresParBlocEtTypeKeyWord_returnsRoomsFromService() throws Exception {
+        when(chambreService.getChambresParBlocEtTypeKeyWord(1, TypeChambre.SIMPLE))
+                .thenReturn(List.of(Chambre.builder().numeroChambre(101).build()));
+
+        mockMvc.perform(get("/api/chambres/get-par-bloc-type-keyword").param("idBloc", "1").param("typeC", "SIMPLE"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].numeroChambre").value(101));
     }
 }

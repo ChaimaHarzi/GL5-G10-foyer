@@ -14,13 +14,14 @@ public interface ChambreRepository extends CrudRepository<Chambre,Long> {
     List<Chambre> findByBlocIdBlocAndTypeChambre(long idBloc, TypeChambre typeChambre);
     @Query("select c from Chambre c where c.bloc.idBloc = :idBloc and c.typeChambre = :typeChambre")
     List<Chambre> findByBlocIdBlocAndTypeChambreJPQL(long idBloc, TypeChambre typeChambre);
-    @Query("select c from Chambre c join Reservation r on (r member of c.reservations) where (c.bloc.idBloc = :idBloc and r.idReservation not like cast(year(current_date) as string)) order by c.idChambre limit 1")
+    // "Non réservée" = no reservation for the current year (rooms never reserved included)
+    @Query("select c from Chambre c where c.bloc.idBloc = :idBloc and not exists (select r from Reservation r where r member of c.reservations and year(r.anneeUniversitaire) = year(current_date)) order by c.idChambre limit 1")
     Chambre getForReservation(long idBloc);
 
     Chambre findByReservationsIdReservation(String idReservation);
-    @Query("select c from Chambre c join Reservation r on r member of c.reservations where c.bloc.foyer.universite.nomUniversite = :nomUniversite and c.typeChambre = :type and r.idReservation not like cast(year(current_date) as string)")
+    @Query("select c from Chambre c where c.bloc.foyer.universite.nomUniversite = :nomUniversite and c.typeChambre = :type and not exists (select r from Reservation r where r member of c.reservations and year(r.anneeUniversitaire) = year(current_date))")
     List<Chambre> getChambresNonReserveParNomUniversiteEtTypeChambre(String nomUniversite, TypeChambre type);
 
-    @Query("select c from Chambre c join Reservation r on r member of c.reservations where r.idReservation not like cast(year(current_date) as string)")
+    @Query("select c from Chambre c where not exists (select r from Reservation r where r member of c.reservations and year(r.anneeUniversitaire) = year(current_date))")
     List<Chambre> getChambresNonReserve();
 }
