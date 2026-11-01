@@ -79,14 +79,15 @@ def publishToNexus() {
     }
 }
 
-// Docker image name "<docker hub account>/<IMAGE_REPO>": the account is the username of the
-// 'docker-hub-repo' credential, so each Jenkins pushes to the account it is allowed to write to.
-def resolveImageName() {
+// Docker image name "<docker hub account>/<repository>" (IMAGE_REPO for the back, FRONT_IMAGE_REPO for the front):
+// the account is the username of the 'docker-hub-repo' credential, so each Jenkins pushes to the account
+// it is allowed to write to.
+def resolveImageName(String repository = env.IMAGE_REPO) {
     def name
     withCredentials([usernamePassword(credentialsId: 'docker-hub-repo',
             usernameVariable: 'DOCKER_USER',
             passwordVariable: 'DOCKER_PASS')]) {
-        name = "${env.DOCKER_USER.toLowerCase()}/${env.IMAGE_REPO}".toString()
+        name = "${env.DOCKER_USER.toLowerCase()}/${repository}".toString()
     }
     return name
 }
@@ -94,6 +95,12 @@ def resolveImageName() {
 // Docker: builds the image from the Dockerfile, tagged with the Jenkins build number and "latest".
 def buildImage() {
     sh "docker build -t ${env.IMAGE_NAME}:${env.BUILD_NUMBER} -t ${env.IMAGE_NAME}:latest ."
+}
+
+// Front image: Angular built in production mode and served by Nginx (frontend/Dockerfile, stage "final").
+// Same tags as the back: the build number and "latest".
+def buildFrontImage() {
+    sh "docker build -t ${env.FRONT_IMAGE_NAME}:${env.BUILD_NUMBER} -t ${env.FRONT_IMAGE_NAME}:latest frontend"
 }
 
 // Docker Hub: logs in with the 'docker-hub-repo' credential and pushes both tags.

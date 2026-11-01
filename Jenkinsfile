@@ -25,6 +25,7 @@ pipeline {
         // Repository name on Docker Hub; the account (namespace) is taken from the
         // 'docker-hub-repo' credential of the Jenkins running the pipeline.
         IMAGE_REPO = 'tpfoyer'
+        FRONT_IMAGE_REPO = 'tpfoyer-front'
         TF_VAR_cluster_name='tpfoyer-eks-chaima'
         // S3 bucket holding the Terraform state (created once by hand, see step 2).
         TF_STATE_BUCKET = 'tpfoyer-tfstate-chaima-058264229450'
@@ -39,7 +40,8 @@ pipeline {
                 script {
                     gv = load 'script.groovy'
                     env.IMAGE_NAME = gv.resolveImageName()
-                    echo "Docker image: ${env.IMAGE_NAME}"
+                    env.FRONT_IMAGE_NAME = gv.resolveImageName(env.FRONT_IMAGE_REPO)
+                    echo "Docker images: ${env.IMAGE_NAME} (back), ${env.FRONT_IMAGE_NAME} (front)"
                 }
             }
         }
@@ -140,6 +142,14 @@ pipeline {
                     steps {
                         script {
                             gv.buildImage()
+                        }
+                    }
+                }
+
+                stage('BUILDING FRONT IMAGE') {
+                    steps {
+                        script {
+                            gv.buildFrontImage()
                         }
                     }
                 }

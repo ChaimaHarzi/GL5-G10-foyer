@@ -1,0 +1,33 @@
+# Nginx configuration of the front (template: ${API_URL} is replaced at start-up by the Nginx image).
+# Only defined environment variables are replaced, so the Nginx variables ($uri, $http_host...) stay as they are.
+server {
+    listen 80;
+    root /usr/share/nginx/html;
+
+    # Health check for Kubernetes (readinessProbe): answers as soon as Nginx runs, even if the back is starting
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 'ok';
+    }
+
+    # API and Swagger: forwarded to the back (in production, this replaces proxy.conf.json of "ng serve").
+    # The browser only talks to the front: same origin, no CORS.
+    location /tpFoyer17/ {
+        proxy_pass ${API_URL};
+        proxy_set_header Host              $http_host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # index.html is never cached: a new deployment is seen at the next page load
+    location = /index.html {
+        add_header Cache-Control "no-cache";
+    }
+
+    # Routes of Angular (/reservations, /etudiants...) are not files: send index.html, the Angular router does the rest
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
