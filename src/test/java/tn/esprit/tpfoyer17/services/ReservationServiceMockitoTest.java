@@ -158,10 +158,10 @@ class ReservationServiceMockitoTest {
     @Test
     void ajouterReservation_newReservationInSimpleRoom_buildsIdAndIsNotValid() {
         Etudiant etudiant = Etudiant.builder().cinEtudiant(111).build();
+        Chambre chambre = Chambre.builder().idChambre(5L).typeChambre(TypeChambre.SIMPLE).reservations(new HashSet<>()).build();
         when(reservationRepository.findForReservation(1L)).thenReturn(null);
         when(etudiantRepository.findByCinEtudiant(111L)).thenReturn(etudiant);
-        when(chambreRepository.getForReservation(1L))
-                .thenReturn(Chambre.builder().idChambre(5L).typeChambre(TypeChambre.SIMPLE).build());
+        when(chambreRepository.getForReservation(1L)).thenReturn(chambre);
         when(blocRepository.findById(1L)).thenReturn(Optional.of(Bloc.builder().idBloc(1L).nomBloc("A").build()));
         when(reservationRepository.save(any(Reservation.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -170,6 +170,8 @@ class ReservationServiceMockitoTest {
         assertEquals("5A" + Year.now().getValue(), result.getIdReservation());
         assertTrue(result.getEtudiants().contains(etudiant));
         assertFalse(result.isEstValide());
+        assertTrue(chambre.getReservations().contains(result));
+        verify(chambreRepository).save(chambre);
     }
 
     @Test
@@ -178,7 +180,7 @@ class ReservationServiceMockitoTest {
         when(reservationRepository.findForReservation(1L)).thenReturn(null);
         when(etudiantRepository.findByCinEtudiant(111L)).thenReturn(etudiant);
         when(chambreRepository.getForReservation(1L))
-                .thenReturn(Chambre.builder().idChambre(5L).typeChambre(TypeChambre.DOUBLE).build());
+                .thenReturn(Chambre.builder().idChambre(5L).typeChambre(TypeChambre.DOUBLE).reservations(new HashSet<>()).build());
         when(blocRepository.findById(1L)).thenReturn(Optional.of(Bloc.builder().idBloc(1L).nomBloc("A").build()));
         when(reservationRepository.save(any(Reservation.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -187,7 +189,28 @@ class ReservationServiceMockitoTest {
         assertTrue(result.isEstValide());
     }
 
+    @Test
+    void ajouterReservation_unknownCin_throwsNotFoundAndSavesNothing() {
+        assertThrows(NoSuchElementException.class, () -> reservationService.ajouterReservation(1L, 999L));
+
+        verify(reservationRepository, never()).save(any());
+    }
+
+    @Test
+    void ajouterReservation_noFreeChambreInBloc_throwsNotFound() {
+        when(etudiantRepository.findByCinEtudiant(111L)).thenReturn(Etudiant.builder().cinEtudiant(111).build());
+
+        assertThrows(NoSuchElementException.class, () -> reservationService.ajouterReservation(1L, 111L));
+
+        verify(reservationRepository, never()).save(any());
+    }
+
     // ---------- annulerReservation ----------
+
+    @Test
+    void annulerReservation_noReservationThisYear_throwsNotFound() {
+        assertThrows(NoSuchElementException.class, () -> reservationService.annulerReservation(111L));
+    }
 
     @Test
     void annulerReservation_removesEtudiantAndReopensReservation() {

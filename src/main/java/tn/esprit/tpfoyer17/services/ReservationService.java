@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import tn.esprit.tpfoyer17.entities.Bloc;
 import tn.esprit.tpfoyer17.entities.Chambre;
 import tn.esprit.tpfoyer17.entities.Etudiant;
@@ -53,11 +54,17 @@ public class ReservationService implements IReservationService{
     }
 
     @Override
+    @Transactional
     public Reservation ajouterReservation(long idBloc, long cinEtudiant) {
+        Etudiant etudiant = etudiantRepository.findByCinEtudiant(cinEtudiant);
+        if (etudiant == null) {
+            throw new NoSuchElementException("Aucun étudiant avec le CIN " + cinEtudiant);
+        }
 
-        if (reservationRepository.findForReservation(idBloc) != null) {
-            Reservation reservation = reservationRepository.findForReservation(idBloc);
-            reservation.getEtudiants().add(etudiantRepository.findByCinEtudiant(cinEtudiant));
+        // A room of the bloc already reserved this year that still has a free place
+        Reservation reservation = reservationRepository.findForReservation(idBloc);
+        if (reservation != null) {
+            reservation.getEtudiants().add(etudiant);
             Chambre chambre = chambreRepository.findByReservationsIdReservation(reservation.getIdReservation());
             TypeChambre typeChambre = chambre.getTypeChambre();
             if (typeChambre == TypeChambre.DOUBLE
@@ -65,27 +72,35 @@ public class ReservationService implements IReservationService{
                 reservation.setEstValide(false);
             }
             return reservationRepository.save(reservation);
-        } else {
-            Set<Etudiant> etudiants = new HashSet<>();
-            etudiants.add(etudiantRepository.findByCinEtudiant(cinEtudiant));
-            Reservation reservation = Reservation.builder().anneeUniversitaire(new Date()).etudiants(etudiants).build();
-            Chambre chambre = chambreRepository.getForReservation(idBloc);
-            Bloc bloc =blocRepository.findById(idBloc).orElseThrow();
-            Calendar calendar = Calendar.getInstance();
-            calendar.setTime(new Date());
-            String idReservation = chambre.getIdChambre()+bloc.getNomBloc()+calendar.get(Calendar.YEAR);
-            reservation.setIdReservation(idReservation);
-            reservation.setEstValide(chambre.getTypeChambre() != TypeChambre.SIMPLE);
-
-        return reservationRepository.save(reservation);
         }
 
-
+        // Otherwise a new reservation in a room of the bloc not reserved this year
+        Chambre chambre = chambreRepository.getForReservation(idBloc);
+        if (chambre == null) {
+            throw new NoSuchElementException("Aucune chambre libre dans le bloc " + idBloc);
+        }
+        Bloc bloc = blocRepository.findById(idBloc).orElseThrow();
+        Set<Etudiant> etudiants = new HashSet<>();
+        etudiants.add(etudiant);
+        Reservation nouvelle = reservationRepository.save(Reservation.builder()
+                .idReservation(chambre.getIdChambre() + bloc.getNomBloc() + Year.now(ZoneId.systemDefault()).getValue())
+                .anneeUniversitaire(new Date())
+                .estValide(chambre.getTypeChambre() != TypeChambre.SIMPLE)
+                .etudiants(etudiants)
+                .build());
+        // Chambre owns the link (column chambre_id_chambre): without it the reservation has no room,
+        // is never found again, and the next student overwrites it
+        chambre.getReservations().add(nouvelle);
+        chambreRepository.save(chambre);
+        return nouvelle;
     }
 
     @Override
     public Reservation annulerReservation(long cinEtudiant) {
         Reservation reservation = reservationRepository.findByEtudiantsCinEtudiantAndAnneeUniversitaire(cinEtudiant, Year.now(ZoneId.systemDefault()).getValue());
+        if (reservation == null) {
+            throw new NoSuchElementException("Aucune réservation cette année pour le CIN " + cinEtudiant);
+        }
         Etudiant etudiant = etudiantRepository.findByCinEtudiant(cinEtudiant);
         reservation.getEtudiants().remove(etudiant);
         reservation.setEstValide(true);

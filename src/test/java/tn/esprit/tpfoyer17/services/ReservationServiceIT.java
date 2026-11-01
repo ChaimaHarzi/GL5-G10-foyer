@@ -112,6 +112,38 @@ class ReservationServiceIT {
     }
 
     @Test
+    void ajouterReservation_twoStudentsInNewDoubleRoom_shareOneReservationLinkedToTheRoom() {
+        Bloc bloc = blocRepository.save(Bloc.builder().nomBloc("A").build());
+        Chambre chambre = chambreRepository.save(Chambre.builder()
+                .numeroChambre(101).typeChambre(TypeChambre.DOUBLE).bloc(bloc).reservations(new HashSet<>()).build());
+        etudiant(111);
+        etudiant(222);
+
+        Reservation first = reservationService.ajouterReservation(bloc.getIdBloc(), 111);
+        Reservation second = reservationService.ajouterReservation(bloc.getIdBloc(), 222);
+
+        assertEquals(first.getIdReservation(), second.getIdReservation());
+        Reservation reloaded = reservationService.getReservationById(first.getIdReservation());
+        assertEquals(2, reloaded.getEtudiants().size());
+        assertFalse(reloaded.isEstValide());
+        assertEquals(chambre.getIdChambre(),
+                chambreRepository.findByReservationsIdReservation(first.getIdReservation()).getIdChambre());
+    }
+
+    @Test
+    void ajouterReservation_onlyRoomAlreadyTakenThisYear_throwsNotFound() {
+        Bloc bloc = blocRepository.save(Bloc.builder().nomBloc("A").build());
+        chambreRepository.save(Chambre.builder()
+                .numeroChambre(101).typeChambre(TypeChambre.SIMPLE).bloc(bloc).reservations(new HashSet<>()).build());
+        etudiant(111);
+        etudiant(222);
+        long idBloc = bloc.getIdBloc();
+        reservationService.ajouterReservation(idBloc, 111);
+
+        assertThrows(NoSuchElementException.class, () -> reservationService.ajouterReservation(idBloc, 222));
+    }
+
+    @Test
     void annulerReservation_removesEtudiantAndReopensReservation() {
         Etudiant e = etudiant(111);
         Reservation r = reservation("R1", e);
