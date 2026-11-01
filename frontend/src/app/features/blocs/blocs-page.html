@@ -1,0 +1,33 @@
+<h1>Blocs</h1>
+<p class="lead">Les blocs d’un foyer et les chambres qu’ils contiennent. Une réservation se fait dans un bloc.</p>
+
+<app-crud-page [config]="config" [service]="service" (changed)="loadChoices()" />
+
+<section class="card">
+  <h2>Ranger des chambres dans un bloc</h2>
+  <form [formGroup]="affectation" (ngSubmit)="affecter()" class="form-grid">
+    <label>
+      <span>Bloc</span>
+      <select formControlName="idBloc" name="idBloc">
+        @for (bloc of blocs(); track bloc.idBloc) {
+          <option [ngValue]="bloc.idBloc">{{ bloc.nomBloc }}</option>
+        }
+      </select>
+    </label>
+    <label>
+      <span>Chambres (Ctrl + clic pour en choisir plusieurs)</span>
+      <select multiple formControlName="idsChambres" name="idsChambres" size="5">
+        @for (chambre of chambres(); track chambre.idChambre) {
+          <option [ngValue]="chambre.idChambre">N° {{ chambre.numeroChambre }} ({{ chambre.typeChambre }})</option>
+        }
+      </select>
+    </label>
+    <div class="form-actions">
+      <button type="submit" class="primary" [disabled]="affectation.invalid">Ranger</button>
+    </div>
+  </form>
+</section>
+
+@if (error(); as message) {
+  <p class="error" role="alert">{{ message }}</p>
+}

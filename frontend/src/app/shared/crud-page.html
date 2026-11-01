@@ -1,0 +1,76 @@
+<section class="card">
+  <h2>{{ editing() ? 'Modifier' : 'Ajouter' }} {{ config().singular }}</h2>
+  <form [formGroup]="form" (ngSubmit)="save()" class="form-grid">
+    @for (field of config().fields; track field.key) {
+      <label>
+        <span>{{ field.label }}</span>
+        @switch (field.type) {
+          @case ('number') {
+            <input type="number" [formControlName]="field.key" [name]="field.key" />
+          }
+          @case ('date') {
+            <input type="date" [formControlName]="field.key" [name]="field.key" />
+          }
+          @case ('select') {
+            <select [formControlName]="field.key" [name]="field.key">
+              @for (option of field.options; track option) {
+                <option [value]="option">{{ option }}</option>
+              }
+            </select>
+          }
+          @default {
+            <input type="text" [formControlName]="field.key" [name]="field.key" />
+          }
+        }
+      </label>
+    }
+    <div class="form-actions">
+      <button type="submit" class="primary">{{ editing() ? 'Enregistrer' : 'Ajouter' }}</button>
+      @if (editing()) {
+        <button type="button" (click)="cancel()">Annuler</button>
+      }
+    </div>
+  </form>
+  @if (form.invalid && form.touched) {
+    <p class="hint">Tous les champs sont obligatoires.</p>
+  }
+</section>
+
+@if (error(); as message) {
+  <p class="error" role="alert">{{ message }}</p>
+}
+
+<section class="card">
+  <h2>{{ config().title }} ({{ rows().length }})</h2>
+  @if (loading()) {
+    <p class="muted">Chargement…</p>
+  } @else if (rows().length === 0) {
+    <p class="muted">Aucun élément pour le moment.</p>
+  } @else {
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            @for (column of config().columns; track column.label) {
+              <th>{{ column.label }}</th>
+            }
+            <th class="actions-column">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track $index) {
+            <tr>
+              @for (column of config().columns; track column.label) {
+                <td>{{ column.value(row) }}</td>
+              }
+              <td class="row-actions">
+                <button type="button" (click)="edit(row)">Modifier</button>
+                <button type="button" class="danger" (click)="remove(row)">Supprimer</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

@@ -1,0 +1,100 @@
+<h1>Réservations</h1>
+<p class="lead">
+  L’API choisit la chambre : elle complète une chambre du bloc qui a encore une place, sinon elle ouvre une
+  chambre libre cette année.
+</p>
+
+<div class="two-columns">
+  <section class="card">
+    <h2>Nouvelle réservation</h2>
+    <form [formGroup]="ajout" (ngSubmit)="ajouter()" class="form-grid">
+      <label>
+        <span>Bloc</span>
+        <select formControlName="idBloc" name="idBloc">
+          @for (bloc of blocs(); track bloc.idBloc) {
+            <option [ngValue]="bloc.idBloc">{{ bloc.nomBloc }}</option>
+          }
+        </select>
+      </label>
+      <label>
+        <span>Étudiant</span>
+        <select formControlName="cinEtudiant" name="cinEtudiant">
+          @for (etudiant of etudiants(); track etudiant.idEtudiant) {
+            <option [ngValue]="etudiant.cinEtudiant">
+              {{ etudiant.prenomEtudiant }} {{ etudiant.nomEtudiant }} ({{ etudiant.cinEtudiant }})
+            </option>
+          }
+        </select>
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="primary" [disabled]="ajout.invalid">Réserver</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Annuler la réservation d’un étudiant</h2>
+    <div class="form-grid">
+      <label>
+        <span>Étudiant</span>
+        <select [formControl]="annulation" name="annulation">
+          @for (etudiant of etudiants(); track etudiant.idEtudiant) {
+            <option [ngValue]="etudiant.cinEtudiant">
+              {{ etudiant.prenomEtudiant }} {{ etudiant.nomEtudiant }} ({{ etudiant.cinEtudiant }})
+            </option>
+          }
+        </select>
+      </label>
+      <div class="form-actions">
+        <button type="button" (click)="annuler()" [disabled]="annulation.invalid">Annuler la réservation</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+@if (message(); as text) {
+  <p class="success" role="status">{{ text }}</p>
+}
+@if (error(); as text) {
+  <p class="error" role="alert">{{ text }}</p>
+}
+
+<section class="card">
+  <h2>Réservations ({{ reservations().length }})</h2>
+  @if (reservations().length === 0) {
+    <p class="muted">Aucune réservation pour le moment.</p>
+  } @else {
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Réservation</th>
+            <th>Année</th>
+            <th>Chambre</th>
+            <th>Étudiants</th>
+            <th class="actions-column">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (reservation of reservations(); track reservation.idReservation) {
+            <tr>
+              <td>{{ reservation.idReservation }}</td>
+              <td>{{ annee(reservation) }}</td>
+              <td>
+                @if (reservation.estValide) {
+                  <span class="badge open">Place libre</span>
+                } @else {
+                  <span class="badge full">Complète</span>
+                }
+              </td>
+              <td>{{ occupants(reservation) }}</td>
+              <td class="row-actions">
+                <button type="button" class="danger" (click)="supprimer(reservation)">Supprimer</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>
