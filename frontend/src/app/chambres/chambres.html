@@ -1,0 +1,170 @@
+<header class="page-entete">
+  <div>
+    <h2>Chambres</h2>
+    <p class="sous-titre">Les chambres de chaque bloc, par type : simple, double ou triple.</p>
+  </div>
+  <button type="button" class="btn btn-primaire" data-test="ouvrir-ajout" (click)="ouvrirAjout()">
+    <app-icon nom="plus" /> Nouvelle chambre
+  </button>
+</header>
+
+<section class="stats" aria-label="Statistiques">
+  <app-stat-card libelle="Chambres" [valeur]="chargement() ? '—' : stats().total" icone="door" ton="primaire" />
+  <app-stat-card libelle="Simples / Doubles / Triples" [valeur]="chargement() ? '—' : stats().parType" icone="bed" ton="succes" />
+  <app-stat-card libelle="Sans bloc" [valeur]="chargement() ? '—' : stats().sansBloc" icone="blocks" ton="alerte" />
+</section>
+
+<section class="carte">
+  <div class="barre-outils">
+    <label class="recherche">
+      <app-icon nom="search" />
+      <input type="search" name="recherche" placeholder="Rechercher par numéro ou bloc…"
+             [value]="recherche()" (input)="rechercher($event)" aria-label="Rechercher une chambre" />
+    </label>
+    <div class="filtres" role="group" aria-label="Filtrer par type">
+      <button type="button" class="filtre" data-type="TOUS" [class.actif]="!filtreType()"
+              [attr.aria-pressed]="!filtreType()" (click)="filtrer(null)">Tous</button>
+      @for (t of types; track t) {
+        <button type="button" class="filtre" [attr.data-type]="t" [class.actif]="filtreType() === t"
+                [attr.aria-pressed]="filtreType() === t" (click)="filtrer(t)">{{ libelleType(t) }}</button>
+      }
+    </div>
+    @if (!chargement() && !erreurChargement()) {
+      <span class="compteur">{{ filtrees().length }} sur {{ chambres().length }}</span>
+    }
+  </div>
+
+  @if (chargement()) {
+    <div class="tableau-conteneur" aria-busy="true">
+      <table class="tableau">
+        <tbody>
+          @for (n of lignesSquelette; track n) {
+            <tr class="chargement">
+              <td><div class="cellule-nom"><div class="squelette rond"></div><div class="squelette" style="width: 110px"></div></div></td>
+              <td><div class="squelette" style="width: 70px"></div></td>
+              <td><div class="squelette" style="width: 100px"></div></td>
+              <td></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else if (erreurChargement()) {
+    <div class="etat" role="alert">
+      <span class="etat-icone erreur"><app-icon nom="alert" [taille]="28" /></span>
+      <h3>Chargement impossible</h3>
+      <p>{{ erreurChargement() }}</p>
+      <button type="button" class="btn btn-secondaire" data-test="reessayer" (click)="charger()">
+        <app-icon nom="refresh" /> Réessayer
+      </button>
+    </div>
+  } @else if (chambres().length === 0) {
+    <div class="etat" data-test="etat-vide">
+      <span class="etat-icone"><app-icon nom="door" [taille]="28" /></span>
+      <h3>Aucune chambre pour le moment</h3>
+      <p>Ajoutez une chambre et placez-la directement dans un bloc.</p>
+      <button type="button" class="btn btn-primaire" (click)="ouvrirAjout()">
+        <app-icon nom="plus" /> Ajouter une chambre
+      </button>
+    </div>
+  } @else {
+    <div class="tableau-conteneur">
+      <table class="tableau">
+        <thead>
+          <tr><th>Chambre</th><th>Type</th><th>Bloc</th><th class="actions">Actions</th></tr>
+        </thead>
+        <tbody>
+          @for (l of filtrees(); track l.chambre.idChambre) {
+            <tr class="ligne">
+              <td>
+                <div class="cellule-nom">
+                  <span class="avatar avatar-icone"><app-icon nom="bed" /></span>
+                  <div>
+                    <strong>Chambre {{ l.chambre.numeroChambre }}</strong>
+                    <small>#{{ l.chambre.idChambre }}</small>
+                  </div>
+                </div>
+              </td>
+              <td><span [class]="'badge ' + badgeType(l.chambre.typeChambre)" data-test="type">{{ libelleType(l.chambre.typeChambre) }}</span></td>
+              <td>
+                @if (l.bloc) {
+                  <span class="badge badge-succes" data-test="bloc">{{ l.bloc.nomBloc }}</span>
+                } @else {
+                  <span class="badge badge-neutre" data-test="bloc">Sans bloc</span>
+                }
+              </td>
+              <td class="actions">
+                <button type="button" class="btn-icone modifier" [attr.aria-label]="'Modifier la chambre ' + l.chambre.numeroChambre"
+                        (click)="ouvrirModification(l.chambre)">
+                  <app-icon nom="edit" />
+                </button>
+                <button type="button" class="btn-icone danger supprimer" [attr.aria-label]="'Supprimer la chambre ' + l.chambre.numeroChambre"
+                        (click)="demanderSuppression(l)">
+                  <app-icon nom="trash" />
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="4" class="aucun-resultat">Aucune chambre ne correspond à ces critères.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>
+
+@if (formulaireOuvert()) {
+  <app-modal [titre]="enEdition() ? 'Modifier la chambre' : 'Nouvelle chambre'" (fermer)="fermerFormulaire()">
+    <form [formGroup]="formulaire" (ngSubmit)="enregistrer()">
+      <div class="ligne-champs">
+        <label class="champ">
+          <span>Numéro</span>
+          <input type="number" min="1" name="numeroChambre" formControlName="numeroChambre" placeholder="ex. 101"
+                 [class.invalide]="champInvalide('numeroChambre')" />
+          @if (champInvalide('numeroChambre')) {
+            <small class="erreur-champ">
+              {{ formulaire.controls.numeroChambre.hasError('dejaPris') ? 'Ce numéro existe déjà.' : 'Le numéro doit être au moins 1.' }}
+            </small>
+          }
+        </label>
+        <label class="champ">
+          <span>Type</span>
+          <select name="typeChambre" formControlName="typeChambre">
+            @for (t of types; track t) {
+              <option [ngValue]="t">{{ libelleType(t) }}</option>
+            }
+          </select>
+        </label>
+      </div>
+      @if (!enEdition()) {
+        <label class="champ">
+          <span>Bloc</span>
+          <select name="idBloc" formControlName="idBloc">
+            <option [ngValue]="null">Aucun pour le moment</option>
+            @for (b of blocs(); track b.idBloc) {
+              <option [ngValue]="b.idBloc">{{ b.nomBloc }}</option>
+            }
+          </select>
+        </label>
+      } @else {
+        <p class="aide modal-aide">Pour changer le bloc de cette chambre, utilisez « Affecter des chambres » sur la page Blocs.</p>
+      }
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondaire" (click)="fermerFormulaire()">Annuler</button>
+        <button type="submit" class="btn btn-primaire" [disabled]="enregistrement()">
+          {{ enregistrement() ? 'Enregistrement…' : (enEdition() ? 'Enregistrer' : 'Ajouter') }}
+        </button>
+      </div>
+    </form>
+  </app-modal>
+}
+
+@if (aSupprimer(); as l) {
+  <app-confirm-dialog
+    titre="Supprimer la chambre"
+    [message]="'La chambre ' + l.chambre.numeroChambre + ' sera définitivement supprimée. Cette action est irréversible.'"
+    libelleConfirmer="Supprimer"
+    [enCours]="suppression()"
+    (confirmer)="confirmerSuppression()"
+    (annuler)="annulerSuppression()" />
+}

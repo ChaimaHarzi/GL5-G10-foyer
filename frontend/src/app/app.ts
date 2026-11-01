@@ -25,8 +25,8 @@ export class App {
     { libelle: 'Universités', icone: 'university', lien: '/universites' },
     { libelle: 'Foyers', icone: 'home', lien: '/foyers' },
     { libelle: 'Blocs', icone: 'blocks', lien: '/blocs' },
-    { libelle: 'Chambres', icone: 'door', lien: null },
-    { libelle: 'Étudiants', icone: 'users', lien: null },
+    { libelle: 'Chambres', icone: 'door', lien: '/chambres' },
+    { libelle: 'Étudiants', icone: 'users', lien: '/etudiants' },
     { libelle: 'Réservations', icone: 'calendar', lien: null }
   ];
 

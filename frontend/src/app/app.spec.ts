@@ -22,7 +22,7 @@ describe('App', () => {
     const liens = Array.from(compiled.querySelectorAll('a.nav-lien')).map(a => a.getAttribute('href'));
 
     expect(compiled.querySelector('.marque')?.textContent).toContain('tpFoyer');
-    expect(liens).toEqual(['/universites', '/foyers', '/blocs']);
+    expect(liens).toEqual(['/universites', '/foyers', '/blocs', '/chambres', '/etudiants']);
   });
 
   it('should show the pages not built yet as disabled', () => {
@@ -30,7 +30,7 @@ describe('App', () => {
     fixture.detectChanges();
     const desactives = (fixture.nativeElement as HTMLElement).querySelectorAll('.nav-lien.desactive');
 
-    expect(desactives.length).toBe(4);
+    expect(desactives.length).toBe(2);
     expect(desactives[0].textContent).toContain('bientôt');
   });
 });
