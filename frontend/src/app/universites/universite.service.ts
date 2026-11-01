@@ -26,4 +26,13 @@ export class UniversiteService {
   delete(idUniversite: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/delete/${idUniversite}`);
   }
+
+  // The back finds the universite by its name (findByNomUniversite)
+  affecterFoyer(idFoyer: number, nomUniversite: string): Observable<Universite> {
+    return this.http.put<Universite>(`${this.baseUrl}/affecter-foyer-universite`, null, { params: { idFoyer, nomUniversite } });
+  }
+
+  desaffecterFoyer(idUniversite: number): Observable<Universite> {
+    return this.http.put<Universite>(`${this.baseUrl}/desaffecter-foyer-universite`, null, { params: { idUniversite } });
+  }
 }

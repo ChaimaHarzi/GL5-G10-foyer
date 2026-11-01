@@ -147,6 +147,49 @@ describe('Universites page (integration)', () => {
     expect(lignes().length).toBe(1);
   });
 
+  it('assigns a free foyer to a universite (foyers already used are not offered)', () => {
+    ouvrirLaPage([fst, enit]);
+
+    cliquer('tr.ligne:nth-child(2) button.affecter');
+    httpMock.expectOne('/tpFoyer17/api/foyers/getAll').flush([
+      { idFoyer: 4, nomFoyer: 'Foyer El Amal', capaciteFoyer: 300 },   // already used by FST
+      { idFoyer: 9, nomFoyer: 'Foyer Ennour', capaciteFoyer: 120 }
+    ]);
+    fixture.detectChanges();
+
+    const select = page.querySelector<HTMLSelectElement>('select[name="idFoyer"]')!;
+    const options = Array.from(select.options).map(o => o.textContent?.trim());
+    expect(options).toEqual(['Choisir un foyer…', 'Foyer Ennour (120 places)']);
+
+    select.selectedIndex = 1;
+    select.dispatchEvent(new Event('change'));
+    cliquer('[data-test="confirmer-affectation"]');
+
+    const put = httpMock.expectOne(r => r.url === `${api}/affecter-foyer-universite`);
+    expect(put.request.params.get('idFoyer')).toBe('9');
+    expect(put.request.params.get('nomUniversite')).toBe('ENIT');
+    put.flush({ ...enit, foyer: { idFoyer: 9, nomFoyer: 'Foyer Ennour', capaciteFoyer: 120 } });
+    fixture.detectChanges();
+
+    expect(lignes()[1].textContent).toContain('Foyer Ennour');
+    expect(dernierToast()?.type).toBe('succes');
+  });
+
+  it('unassigns the foyer of a universite after confirmation', () => {
+    ouvrirLaPage([fst]);
+
+    cliquer('button.desaffecter');
+    cliquer('[data-test="confirmer"]');
+
+    const put = httpMock.expectOne(`${api}/desaffecter-foyer-universite?idUniversite=1`);
+    expect(put.request.method).toBe('PUT');
+    put.flush({ ...fst, foyer: null });
+    fixture.detectChanges();
+
+    expect(lignes()[0].textContent).toContain('Non affecté');
+    expect(lignes()[0].querySelector('button.affecter')).not.toBeNull();
+  });
+
   it('filters the table with the search field', () => {
     ouvrirLaPage([fst, enit]);
 

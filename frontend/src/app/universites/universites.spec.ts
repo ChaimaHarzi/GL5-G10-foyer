@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NEVER, of, throwError } from 'rxjs';
+import { FoyerService } from '../foyers/foyer.service';
 import { Universite } from './universite.model';
 import { Universites } from './universites';
 import { UniversiteService } from './universite.service';
@@ -20,11 +21,15 @@ describe('Universites (unit)', () => {
   const enit: Universite = { idUniversite: 2, nomUniversite: 'ENIT', adresse: 'Tunis', foyer: null };
 
   beforeEach(async () => {
-    service = jasmine.createSpyObj<UniversiteService>('UniversiteService', ['getAll', 'add', 'update', 'delete']);
+    service = jasmine.createSpyObj<UniversiteService>('UniversiteService',
+      ['getAll', 'add', 'update', 'delete', 'affecterFoyer', 'desaffecterFoyer']);
 
     await TestBed.configureTestingModule({
       imports: [Universites],
-      providers: [{ provide: UniversiteService, useValue: service }]
+      providers: [
+        { provide: UniversiteService, useValue: service },
+        { provide: FoyerService, useValue: jasmine.createSpyObj<FoyerService>('FoyerService', ['getAll']) }
+      ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(Universites);
@@ -60,6 +65,17 @@ describe('Universites (unit)', () => {
 
     const avatars = Array.from(page.querySelectorAll('.avatar')).map(e => e.textContent?.trim());
     expect(avatars).toEqual(['FS', 'EN']);
+  });
+
+  it('offers "assign" for a universite without foyer and "unassign" for one with a foyer', () => {
+    service.getAll.and.returnValue(of([fst, enit]));
+
+    fixture.detectChanges();
+
+    const [ligneFst, ligneEnit] = Array.from(page.querySelectorAll('tr.ligne'));
+    expect(ligneFst.querySelector('button.desaffecter')).not.toBeNull();
+    expect(ligneFst.querySelector('button.affecter')).toBeNull();
+    expect(ligneEnit.querySelector('button.affecter')).not.toBeNull();
   });
 
   it('shows the empty state when there is no universite', () => {

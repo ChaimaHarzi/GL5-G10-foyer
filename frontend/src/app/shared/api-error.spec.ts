@@ -24,6 +24,12 @@ describe('messageErreur', () => {
     }
   });
 
+  it('uses the default message for a 500 answered by Spring without detail (e.g. database constraint)', () => {
+    const erreur = new HttpErrorResponse({ status: 500, error: { timestamp: '2026-11-01', status: 500, error: 'Internal Server Error' } });
+
+    expect(messageErreur(erreur, parDefaut)).toBe(parDefaut);
+  });
+
   it('falls back to the default message for other errors without detail', () => {
     expect(messageErreur(new HttpErrorResponse({ status: 400, error: null }), parDefaut)).toBe(parDefaut);
     expect(messageErreur(new Error('boom'), parDefaut)).toBe(parDefaut);

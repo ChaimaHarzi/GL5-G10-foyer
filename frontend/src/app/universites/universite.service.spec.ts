@@ -61,6 +61,24 @@ describe('UniversiteService', () => {
     expect(resultat?.nomUniversite).toBe('FST Tunis');
   });
 
+  it('affecterFoyer() sends a PUT with the foyer id and the universite name as parameters', () => {
+    service.affecterFoyer(4, 'FST Tunis').subscribe();
+
+    const req = httpMock.expectOne(r => r.url === '/tpFoyer17/api/universites/affecter-foyer-universite');
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.params.get('idFoyer')).toBe('4');
+    expect(req.request.params.get('nomUniversite')).toBe('FST Tunis');
+    req.flush({ idUniversite: 1, nomUniversite: 'FST Tunis', adresse: 'Tunis', foyer: { idFoyer: 4, nomFoyer: 'El Amal', capaciteFoyer: 300 } });
+  });
+
+  it('desaffecterFoyer() sends a PUT with the universite id as parameter', () => {
+    service.desaffecterFoyer(1).subscribe();
+
+    const req = httpMock.expectOne('/tpFoyer17/api/universites/desaffecter-foyer-universite?idUniversite=1');
+    expect(req.request.method).toBe('PUT');
+    req.flush({ idUniversite: 1, nomUniversite: 'FST', adresse: 'Tunis', foyer: null });
+  });
+
   it('delete() sends a DELETE to /delete/{id}', () => {
     service.delete(7).subscribe();
 

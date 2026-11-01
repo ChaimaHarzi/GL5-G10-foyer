@@ -23,8 +23,8 @@ export class App {
   protected readonly menu: EntreeMenu[] = [
     { libelle: 'Tableau de bord', icone: 'dashboard', lien: null },
     { libelle: 'Universités', icone: 'university', lien: '/universites' },
-    { libelle: 'Foyers', icone: 'home', lien: null },
-    { libelle: 'Blocs', icone: 'blocks', lien: null },
+    { libelle: 'Foyers', icone: 'home', lien: '/foyers' },
+    { libelle: 'Blocs', icone: 'blocks', lien: '/blocs' },
     { libelle: 'Chambres', icone: 'door', lien: null },
     { libelle: 'Étudiants', icone: 'users', lien: null },
     { libelle: 'Réservations', icone: 'calendar', lien: null }

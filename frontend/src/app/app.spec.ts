@@ -15,13 +15,14 @@ describe('App', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
 
-  it('should render the brand and a working link to the universites page', () => {
+  it('should render the brand and the links to the pages already built', () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
+    const liens = Array.from(compiled.querySelectorAll('a.nav-lien')).map(a => a.getAttribute('href'));
 
     expect(compiled.querySelector('.marque')?.textContent).toContain('tpFoyer');
-    expect(compiled.querySelector('a.nav-lien[href="/universites"]')).not.toBeNull();
+    expect(liens).toEqual(['/universites', '/foyers', '/blocs']);
   });
 
   it('should show the pages not built yet as disabled', () => {
@@ -29,7 +30,7 @@ describe('App', () => {
     fixture.detectChanges();
     const desactives = (fixture.nativeElement as HTMLElement).querySelectorAll('.nav-lien.desactive');
 
-    expect(desactives.length).toBe(6);
+    expect(desactives.length).toBe(4);
     expect(desactives[0].textContent).toContain('bientôt');
   });
 });

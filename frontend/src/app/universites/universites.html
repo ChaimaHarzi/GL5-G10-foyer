@@ -86,6 +86,17 @@
                 }
               </td>
               <td class="actions">
+                @if (u.foyer) {
+                  <button type="button" class="btn-icone desaffecter" title="Désaffecter le foyer"
+                          [attr.aria-label]="'Désaffecter le foyer de ' + u.nomUniversite" (click)="demanderDesaffectation(u)">
+                    <app-icon nom="unlink" />
+                  </button>
+                } @else {
+                  <button type="button" class="btn-icone affecter" title="Affecter un foyer"
+                          [attr.aria-label]="'Affecter un foyer à ' + u.nomUniversite" (click)="ouvrirAffectation(u)">
+                    <app-icon nom="link" />
+                  </button>
+                }
                 <button type="button" class="btn-icone modifier" [attr.aria-label]="'Modifier ' + u.nomUniversite" (click)="ouvrirModification(u)">
                   <app-icon nom="edit" />
                 </button>
@@ -130,6 +141,50 @@
       </div>
     </form>
   </app-modal>
+}
+
+@if (aAffecter(); as u) {
+  <app-modal [titre]="'Affecter un foyer à ' + u.nomUniversite" (fermer)="fermerAffectation()">
+    @if (foyersLibres(); as foyers) {
+      @if (foyers.length === 0) {
+        <p class="aide" data-test="aucun-foyer-libre">Tous les foyers sont déjà affectés. Créez d’abord un nouveau foyer dans la page Foyers.</p>
+      } @else {
+        <label class="champ">
+          <span>Foyer</span>
+          <select name="idFoyer" [formControl]="foyerChoisi" [class.invalide]="foyerChoisi.invalid && foyerChoisi.touched">
+            <option [ngValue]="null">Choisir un foyer…</option>
+            @for (f of foyers; track f.idFoyer) {
+              <option [ngValue]="f.idFoyer">{{ f.nomFoyer }} ({{ f.capaciteFoyer }} places)</option>
+            }
+          </select>
+          @if (foyerChoisi.invalid && foyerChoisi.touched) {
+            <small class="erreur-champ">Choisissez un foyer.</small>
+          }
+        </label>
+      }
+    } @else {
+      <div class="squelette" style="height: 42px; margin-bottom: 16px"></div>
+    }
+    <div class="modal-actions">
+      <button type="button" class="btn btn-secondaire" (click)="fermerAffectation()">Annuler</button>
+      <button type="button" class="btn btn-primaire" data-test="confirmer-affectation"
+              [disabled]="affectation() || !foyersLibres()?.length" (click)="confirmerAffectation()">
+        {{ affectation() ? 'Affectation…' : 'Affecter' }}
+      </button>
+    </div>
+  </app-modal>
+}
+
+@if (aDesaffecter(); as u) {
+  <app-confirm-dialog
+    titre="Désaffecter le foyer"
+    [message]="'« ' + (u.foyer?.nomFoyer ?? 'Le foyer') + ' » ne sera plus rattaché à « ' + u.nomUniversite + ' ». Le foyer n’est pas supprimé.'"
+    libelleConfirmer="Désaffecter"
+    libelleEnCours="Désaffectation…"
+    icone="unlink"
+    [enCours]="desaffectation()"
+    (confirmer)="confirmerDesaffectation()"
+    (annuler)="annulerDesaffectation()" />
 }
 
 @if (aSupprimer(); as u) {

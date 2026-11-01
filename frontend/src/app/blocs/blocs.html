@@ -1,0 +1,193 @@
+<header class="page-entete">
+  <div>
+    <h2>Blocs</h2>
+    <p class="sous-titre">Les bâtiments de chaque foyer et les chambres qu’ils contiennent.</p>
+  </div>
+  <button type="button" class="btn btn-primaire" data-test="ouvrir-ajout" (click)="ouvrirAjout()">
+    <app-icon nom="plus" /> Nouveau bloc
+  </button>
+</header>
+
+<section class="stats" aria-label="Statistiques">
+  <app-stat-card libelle="Blocs" [valeur]="chargement() ? '—' : stats().total" icone="blocks" ton="primaire" />
+  <app-stat-card libelle="Capacité totale" [valeur]="chargement() ? '—' : stats().capacite" icone="users" ton="succes" />
+  <app-stat-card libelle="Chambres rattachées" [valeur]="chargement() ? '—' : stats().chambres" icone="door" ton="alerte" />
+</section>
+
+<section class="carte">
+  <div class="barre-outils">
+    <label class="recherche">
+      <app-icon nom="search" />
+      <input type="search" name="recherche" placeholder="Rechercher par bloc ou foyer…"
+             [value]="recherche()" (input)="rechercher($event)" aria-label="Rechercher un bloc" />
+    </label>
+    @if (!chargement() && !erreurChargement()) {
+      <span class="compteur">{{ filtrees().length }} sur {{ blocs().length }}</span>
+    }
+  </div>
+
+  @if (chargement()) {
+    <div class="tableau-conteneur" aria-busy="true">
+      <table class="tableau">
+        <tbody>
+          @for (n of lignesSquelette; track n) {
+            <tr class="chargement">
+              <td><div class="cellule-nom"><div class="squelette rond"></div><div class="squelette" style="width: 120px"></div></div></td>
+              <td><div class="squelette" style="width: 70px"></div></td>
+              <td><div class="squelette" style="width: 110px"></div></td>
+              <td><div class="squelette" style="width: 60px"></div></td>
+              <td></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else if (erreurChargement()) {
+    <div class="etat" role="alert">
+      <span class="etat-icone erreur"><app-icon nom="alert" [taille]="28" /></span>
+      <h3>Chargement impossible</h3>
+      <p>{{ erreurChargement() }}</p>
+      <button type="button" class="btn btn-secondaire" data-test="reessayer" (click)="charger()">
+        <app-icon nom="refresh" /> Réessayer
+      </button>
+    </div>
+  } @else if (blocs().length === 0) {
+    <div class="etat" data-test="etat-vide">
+      <span class="etat-icone"><app-icon nom="blocks" [taille]="28" /></span>
+      <h3>Aucun bloc pour le moment</h3>
+      <p>Ajoutez un bloc à un foyer, puis affectez-lui des chambres.</p>
+      <button type="button" class="btn btn-primaire" (click)="ouvrirAjout()">
+        <app-icon nom="plus" /> Ajouter un bloc
+      </button>
+    </div>
+  } @else {
+    <div class="tableau-conteneur">
+      <table class="tableau">
+        <thead>
+          <tr><th>Bloc</th><th>Capacité</th><th>Foyer</th><th>Chambres</th><th class="actions">Actions</th></tr>
+        </thead>
+        <tbody>
+          @for (b of filtrees(); track b.idBloc) {
+            <tr class="ligne">
+              <td>
+                <div class="cellule-nom">
+                  <span class="avatar" [style.background]="couleur(b.nomBloc)">{{ initiales(b.nomBloc) }}</span>
+                  <div>
+                    <strong>{{ b.nomBloc }}</strong>
+                    <small>#{{ b.idBloc }}</small>
+                  </div>
+                </div>
+              </td>
+              <td><span class="nombre">{{ b.capaciteBloc }}<small>places</small></span></td>
+              <td>
+                @if (b.foyer) {
+                  <span class="badge badge-succes">{{ b.foyer.nomFoyer }}</span>
+                } @else {
+                  <span class="badge badge-neutre">Sans foyer</span>
+                }
+              </td>
+              <td><span class="badge badge-info" data-test="nb-chambres">{{ nbChambres(b) }} chambre(s)</span></td>
+              <td class="actions">
+                <button type="button" class="btn-icone affecter" [attr.aria-label]="'Affecter des chambres à ' + b.nomBloc"
+                        title="Affecter des chambres" (click)="ouvrirAffectation(b)">
+                  <app-icon nom="door" />
+                </button>
+                <button type="button" class="btn-icone modifier" [attr.aria-label]="'Modifier ' + b.nomBloc" (click)="ouvrirModification(b)">
+                  <app-icon nom="edit" />
+                </button>
+                <button type="button" class="btn-icone danger supprimer" [disabled]="nbChambres(b) > 0"
+                        [attr.title]="nbChambres(b) > 0 ? 'Ce bloc contient des chambres' : null"
+                        [attr.aria-label]="'Supprimer ' + b.nomBloc" (click)="demanderSuppression(b)">
+                  <app-icon nom="trash" />
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="5" class="aucun-resultat">Aucun bloc ne correspond à « {{ recherche() }} ».</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>
+
+@if (formulaireOuvert()) {
+  <app-modal [titre]="enEdition() ? 'Modifier le bloc' : 'Nouveau bloc'" (fermer)="fermerFormulaire()">
+    <form [formGroup]="formulaire" (ngSubmit)="enregistrer()">
+      <label class="champ">
+        <span>Nom du bloc</span>
+        <input name="nomBloc" formControlName="nomBloc" placeholder="ex. Bloc A" [class.invalide]="champInvalide('nomBloc')" />
+        @if (champInvalide('nomBloc')) {
+          <small class="erreur-champ">Le nom est obligatoire (100 caractères maximum).</small>
+        }
+      </label>
+      <label class="champ">
+        <span>Capacité (places)</span>
+        <input type="number" min="1" name="capaciteBloc" formControlName="capaciteBloc" placeholder="ex. 60"
+               [class.invalide]="champInvalide('capaciteBloc')" />
+        @if (champInvalide('capaciteBloc')) {
+          <small class="erreur-champ">La capacité doit être d’au moins 1 place.</small>
+        }
+      </label>
+      <label class="champ">
+        <span>Foyer</span>
+        <select name="idFoyer" formControlName="idFoyer">
+          <option [ngValue]="null">Aucun foyer</option>
+          @for (f of foyers(); track f.idFoyer) {
+            <option [ngValue]="f.idFoyer">{{ f.nomFoyer }}</option>
+          }
+        </select>
+      </label>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondaire" (click)="fermerFormulaire()">Annuler</button>
+        <button type="submit" class="btn btn-primaire" [disabled]="enregistrement()">
+          {{ enregistrement() ? 'Enregistrement…' : (enEdition() ? 'Enregistrer' : 'Ajouter') }}
+        </button>
+      </div>
+    </form>
+  </app-modal>
+}
+
+@if (blocAffectation(); as bloc) {
+  <app-modal [titre]="'Affecter des chambres à ' + bloc.nomBloc" (fermer)="fermerAffectation()">
+    @if (choixChambres(); as choix) {
+      @if (choix.length === 0) {
+        <p class="aide" data-test="aucune-chambre">Aucune chambre n’existe encore. Créez d’abord des chambres.</p>
+      } @else {
+        <p class="aide">Cochez les chambres à placer dans ce bloc. Une chambre d’un autre bloc y sera déplacée.</p>
+        <div class="liste-cases">
+          @for (c of choix; track c.chambre.idChambre) {
+            @let dejaIci = c.blocActuel?.idBloc === bloc.idBloc;
+            <label class="case" [class.desactivee]="dejaIci">
+              <input type="checkbox" [attr.data-chambre]="c.chambre.idChambre"
+                     [checked]="dejaIci || selection().has(c.chambre.idChambre)" [disabled]="dejaIci"
+                     (change)="basculer(c.chambre.idChambre)" />
+              <span>Chambre {{ c.chambre.numeroChambre }} · {{ c.chambre.typeChambre }}</span>
+              <small>{{ dejaIci ? 'déjà dans ce bloc' : (c.blocActuel ? 'dans ' + c.blocActuel.nomBloc : 'sans bloc') }}</small>
+            </label>
+          }
+        </div>
+      }
+    } @else {
+      <div class="squelette" style="height: 42px; margin-bottom: 8px"></div>
+      <div class="squelette" style="height: 42px"></div>
+    }
+    <div class="modal-actions">
+      <button type="button" class="btn btn-secondaire" (click)="fermerAffectation()">Annuler</button>
+      <button type="button" class="btn btn-primaire" data-test="confirmer-affectation"
+              [disabled]="affectation() || selection().size === 0" (click)="confirmerAffectation()">
+        {{ affectation() ? 'Affectation…' : 'Affecter ' + selection().size + ' chambre(s)' }}
+      </button>
+    </div>
+  </app-modal>
+}
+
+@if (aSupprimer(); as b) {
+  <app-confirm-dialog
+    titre="Supprimer le bloc"
+    [message]="'« ' + b.nomBloc + ' » sera définitivement supprimé. Cette action est irréversible.'"
+    libelleConfirmer="Supprimer"
+    [enCours]="suppression()"
+    (confirmer)="confirmerSuppression()"
+    (annuler)="annulerSuppression()" />
+}

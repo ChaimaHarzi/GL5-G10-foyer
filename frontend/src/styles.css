@@ -212,8 +212,9 @@ button, input { font: inherit; color: inherit; }
   transition: background .15s, color .15s;
 }
 
-.btn-icone:hover { background: var(--surface-2); color: var(--text); }
-.btn-icone.danger:hover { background: var(--danger-soft); color: var(--danger); }
+.btn-icone:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+.btn-icone.danger:hover:not(:disabled) { background: var(--danger-soft); color: var(--danger); }
+.btn-icone:disabled { opacity: .35; cursor: not-allowed; }
 
 /* ---------- Cards and statistics ---------- */
 
@@ -278,6 +279,10 @@ button, input { font: inherit; color: inherit; }
 .badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .badge-succes { background: var(--success-soft); color: var(--success); }
 .badge-neutre { background: var(--surface-2); color: var(--text-3); border: 1px solid var(--border); }
+.badge-info { background: var(--primary-soft); color: var(--primary); }
+.nombre { font-weight: 600; font-variant-numeric: tabular-nums; }
+.nombre small { margin-left: 4px; font-weight: 400; color: var(--text-3); }
+.aucun-resultat { padding: 32px 20px; text-align: center; color: var(--text-3); }
 
 /* ---------- Loading, empty and error states ---------- */
 
@@ -301,14 +306,29 @@ button, input { font: inherit; color: inherit; }
 
 .champ { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
 .champ span { font-size: .85rem; font-weight: 600; color: var(--text-2); }
-.champ input {
+.champ input, .champ select {
   height: 42px; padding: 0 12px;
   border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); outline: 0;
 }
-.champ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
-.champ input.invalide { border-color: var(--danger); }
-.champ input.invalide:focus { box-shadow: 0 0 0 3px var(--danger-soft); }
+.champ input:focus, .champ select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+.champ input.invalide, .champ select.invalide { border-color: var(--danger); }
+.champ input.invalide:focus, .champ select.invalide:focus { box-shadow: 0 0 0 3px var(--danger-soft); }
 .erreur-champ { color: var(--danger); font-size: .8rem; }
+.champ .aide, .aide { font-size: .8rem; font-weight: 400; color: var(--text-3); }
+.ligne-champs { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+
+/* Checkbox list (e.g. chambres to assign to a bloc) */
+.liste-cases { display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; margin-bottom: 16px; }
+.case {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  cursor: pointer; transition: background .12s, border-color .12s;
+}
+.case:hover { background: var(--surface-2); }
+.case:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); }
+.case input { width: 16px; height: 16px; accent-color: var(--primary); }
+.case small { margin-left: auto; color: var(--text-3); font-size: .78rem; }
+.case.desactivee { opacity: .6; cursor: default; }
 
 /* ---------- Modal ---------- */
 

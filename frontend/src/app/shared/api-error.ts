@@ -16,7 +16,10 @@ export function messageErreur(erreur: unknown, parDefaut: string): string {
     if (typeof detail === 'string' && detail.trim()) {
       return detail;
     }
-    if (STATUTS_SERVEUR_INJOIGNABLE.has(erreur.status)) {
+    // A JSON body means the back did answer (e.g. Spring's default error for a database constraint):
+    // only an empty or text body (proxy / Nginx page) means the API could not be reached
+    const corpsVideOuTexte = erreur.error === null || erreur.error === undefined || typeof erreur.error === 'string';
+    if (STATUTS_SERVEUR_INJOIGNABLE.has(erreur.status) && corpsVideOuTexte) {
       return MESSAGE_SERVEUR_INJOIGNABLE;
     }
   }
