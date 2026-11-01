@@ -61,12 +61,13 @@ grafana:
   # Public address (AWS load balancer), protected by the login above
   service:
     type: LoadBalancer
+  # Grafana 13 loads ~30 dashboards at start-up: 256Mi was too small (unavailable, then frozen), so more room here
   resources:
     requests:
-      cpu: 50m
-      memory: 128Mi
-    limits:
+      cpu: 100m
       memory: 256Mi
+    limits:
+      memory: 768Mi
   # Dashboards of Kubernetes come with the chart; the JVM dashboard of the back is downloaded from grafana.com
   dashboardProviders:
     dashboardproviders.yaml:
