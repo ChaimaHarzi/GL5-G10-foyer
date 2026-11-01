@@ -35,7 +35,8 @@ pipeline {
                 script {
                     gv = load 'script.groovy'
                     env.IMAGE_NAME = gv.resolveImageName()
-                    echo "Docker image: ${env.IMAGE_NAME}"
+                    env.FRONTEND_IMAGE_NAME = "${env.IMAGE_NAME}-frontend"
+                    echo "Docker images: ${env.IMAGE_NAME}, ${env.FRONTEND_IMAGE_NAME}"
                 }
             }
         }
@@ -124,6 +125,15 @@ pipeline {
                     }
                 }
 
+                // Angular: npm ci, unit tests and build run inside the frontend's Docker build
+                stage('BUILDING FRONTEND IMAGE') {
+                    steps {
+                        script {
+                            gv.buildFrontendImage()
+                        }
+                    }
+                }
+
                 stage('DEPLOY OUR IMAGE') {
                     steps {
                         script {
@@ -186,7 +196,7 @@ pipeline {
                     <p>
                       <b>Job:</b> ${env.JOB_NAME}<br>
                       <b>Action:</b> ${params.TF_ACTION ?: 'apply'}<br>
-                      <b>Docker image:</b> ${params.TF_ACTION == 'destroy' ? '-' : env.IMAGE_NAME + ':' + env.BUILD_NUMBER}<br>
+                      <b>Docker images:</b> ${params.TF_ACTION == 'destroy' ? '-' : env.IMAGE_NAME + ':' + env.BUILD_NUMBER + ', ' + env.FRONTEND_IMAGE_NAME + ':' + env.BUILD_NUMBER}<br>
                       <b>Duration:</b> ${currentBuild.durationString}
                     </p>
                     <p>
