@@ -1,4 +1,4 @@
-# The Angular front: 2 Nginx pods behind the only public AWS load balancer.
+# The Angular front: 2 to 4 Nginx pods behind the only public AWS load balancer.
 # Nginx serves the Angular pages and forwards /tpFoyer17/... (API, Swagger) to the back.
 # The image tpfoyer-front is replaced by Kustomize with the front image of the build (k8s/kustomization.yaml).
 apiVersion: apps/v1
@@ -9,7 +9,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "2" # after the back: at start-up, Nginx resolves the Service "tpfoyer" of its proxy_pass
 spec:
-  replicas: 2
+  # No "replicas": the number of pods (2 to 4) is decided by the HorizontalPodAutoscaler (k8s/hpa.yaml)
   selector:
     matchLabels:
       app: tpfoyer-front

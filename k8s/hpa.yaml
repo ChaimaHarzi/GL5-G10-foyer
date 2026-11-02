@@ -1,0 +1,47 @@
+# Autoscaling of the back and the front: the HorizontalPodAutoscaler reads the CPU of the pods from metrics-server
+# (installed by Ansible) every 15 s and changes the number of pods to keep them around 70 % of their CPU request.
+# The Deployments have no "replicas" in git: the HPA alone decides between minReplicas and maxReplicas,
+# otherwise ArgoCD (selfHeal) would put back the value of git after each scaling.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: tpfoyer
+  namespace: tpfoyer
+  annotations:
+    argocd.argoproj.io/sync-wave: "1" # with the back
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: tpfoyer
+  minReplicas: 2 # never less: one pod can stop without stopping the API
+  maxReplicas: 3 # each pod reserves 512Mi: one more is enough on 2 nodes
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70 # of the CPU request (250m): 175m per pod on average
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: tpfoyer-front
+  namespace: tpfoyer
+  annotations:
+    argocd.argoproj.io/sync-wave: "2" # with the front
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: tpfoyer-front
+  minReplicas: 2
+  maxReplicas: 4 # Nginx pods are small (64Mi)
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70 # of the CPU request (50m): 35m per pod on average

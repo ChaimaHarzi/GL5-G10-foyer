@@ -1,4 +1,4 @@
-# The tpFoyer API (Spring Boot): 2 pods behind an internal Service, reached through the front (k8s/front.yaml).
+# The tpFoyer API (Spring Boot): 2 to 3 pods behind an internal Service, reached through the front (k8s/front.yaml).
 # The image tpfoyer-back is replaced by Kustomize with the image of the build (k8s/kustomization.yaml).
 apiVersion: apps/v1
 kind: Deployment
@@ -8,7 +8,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "1" # after MySQL
 spec:
-  replicas: 2
+  # No "replicas": the number of pods (2 to 3) is decided by the HorizontalPodAutoscaler (k8s/hpa.yaml)
   selector:
     matchLabels:
       app: tpfoyer
