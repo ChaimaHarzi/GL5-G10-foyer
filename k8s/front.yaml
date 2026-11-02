@@ -9,7 +9,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "2" # after the back: at start-up, Nginx resolves the Service "tpfoyer" of its proxy_pass
 spec:
-  replicas: 3
+  replicas: 2
   selector:
     matchLabels:
       app: tpfoyer-front
