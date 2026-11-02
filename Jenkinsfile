@@ -21,6 +21,13 @@ pipeline {
                description: 'Empty = publish the SNAPSHOT to maven-snapshots. A version (e.g. 1.0.0) = publish a release to maven-releases')
     }
 
+    // A push on GitHub starts a build with the default parameters (apply):
+    // GitHub webhook -> smee.io -> container "smee" -> http://jenkins:8080/github-webhook/ (signature checked with the shared secret).
+    // The commits "Deploy images #N [skip ci]" pushed by this pipeline are ignored by the job (Git setting), so no loop.
+    triggers {
+        githubPush()
+    }
+
     environment {
         // Repository name on Docker Hub; the account (namespace) is taken from the
         // 'docker-hub-repo' credential of the Jenkins running the pipeline.
