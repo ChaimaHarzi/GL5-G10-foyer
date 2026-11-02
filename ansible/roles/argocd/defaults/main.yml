@@ -1,0 +1,15 @@
+# Namespace of ArgoCD (separate from the application and the monitoring)
+argocd_namespace: argocd
+
+# Helm release and chart (version pinned: every build installs exactly the same thing)
+argocd_release: argocd
+argocd_chart: argo/argo-cd
+argocd_chart_version: "10.11.6"
+argocd_repo_url: https://argoproj.github.io/argo-helm
+
+# The application followed by ArgoCD: the folder k8s/ (Kustomize) of this git repository, on the branch of the pipeline
+argocd_app_name: tpfoyer
+argocd_app_namespace: tpfoyer
+argocd_git_url: https://github.com/ChaimaHarzi/GL5-G10-foyer.git
+argocd_git_branch: shaimaHarzi
+argocd_git_path: k8s

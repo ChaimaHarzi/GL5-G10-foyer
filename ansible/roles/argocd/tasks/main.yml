@@ -1,0 +1,102 @@
+# GitOps: ArgoCD runs in the cluster, reads the folder k8s/ of the git repository and keeps the application
+# identical to it. Jenkins does not deploy the application any more: it writes the image tags in git.
+
+# Login of the 'github-pat' Jenkins credential (the repository is private), given as environment variables
+- name: The GitHub login is given by Jenkins
+  ansible.builtin.assert:
+    that:
+      - lookup('ansible.builtin.env', 'GITHUB_USER') | length > 0
+      - lookup('ansible.builtin.env', 'GITHUB_TOKEN') | length > 0
+    fail_msg: GITHUB_USER and GITHUB_TOKEN are empty (Jenkins credential 'github-pat')
+    quiet: true
+
+- name: The Helm repository of Argo is known
+  kubernetes.core.helm_repository:
+    name: argo
+    repo_url: "{{ argocd_repo_url }}"
+
+- name: The namespace of ArgoCD exists
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ argocd_namespace }}"
+
+# ArgoCD reads a Secret with this label as the login of a git repository
+- name: ArgoCD can read the private git repository
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: "{{ argocd_app_name }}-repository"
+        namespace: "{{ argocd_namespace }}"
+        labels:
+          argocd.argoproj.io/secret-type: repository
+      type: Opaque
+      stringData:
+        type: git
+        url: "{{ argocd_git_url }}"
+        username: "{{ lookup('ansible.builtin.env', 'GITHUB_USER') }}"
+        password: "{{ lookup('ansible.builtin.env', 'GITHUB_TOKEN') }}"
+  no_log: true
+
+# Installs the chart the first time, then upgrades it only when the version or the values change
+- name: ArgoCD is installed (argo-cd)
+  kubernetes.core.helm:
+    name: "{{ argocd_release }}"
+    chart_ref: "{{ argocd_chart }}"
+    chart_version: "{{ argocd_chart_version }}"
+    release_namespace: "{{ argocd_namespace }}"
+    values_files:
+      - "{{ role_path }}/files/values.yaml"
+    update_repo_cache: true
+    wait: true
+    wait_timeout: 10m
+
+# From here on, ArgoCD deploys the application by itself and undoes any change made by hand in the cluster
+- name: The application is followed by ArgoCD
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: argoproj.io/v1alpha1
+      kind: Application
+      metadata:
+        name: "{{ argocd_app_name }}"
+        namespace: "{{ argocd_namespace }}"
+      spec:
+        project: default
+        source:
+          repoURL: "{{ argocd_git_url }}"
+          targetRevision: "{{ argocd_git_branch }}"
+          path: "{{ argocd_git_path }}"
+        destination:
+          server: https://kubernetes.default.svc
+          namespace: "{{ argocd_app_namespace }}"
+        syncPolicy:
+          automated:
+            prune: true # an object removed from git is removed from the cluster
+            selfHeal: true # a change made by hand in the cluster is undone
+          retry: # e.g. the first deployment while the cluster is still starting
+            limit: 5
+            backoff:
+              duration: 10s
+              factor: 2
+              maxDuration: 3m
+
+- name: The load balancer of ArgoCD has its public address
+  kubernetes.core.k8s_info:
+    kind: Service
+    name: "{{ argocd_release }}-server"
+    namespace: "{{ argocd_namespace }}"
+  register: argocd_server_service
+  until: argocd_server_service.resources[0].status.loadBalancer.ingress[0].hostname is defined
+  retries: 30
+  delay: 10
+
+- name: Show the address of ArgoCD
+  ansible.builtin.debug:
+    msg: "ArgoCD: http://{{ argocd_server_service.resources[0].status.loadBalancer.ingress[0].hostname }}/"

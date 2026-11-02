@@ -1,5 +1,5 @@
 # Tells Prometheus (installed by Ansible, namespace "monitoring") to read the metrics of the back.
-# ServiceMonitor is a type added by the kube-prometheus-stack chart: apply this file after the chart is installed.
+# ServiceMonitor is a type added by the kube-prometheus-stack chart: Ansible installs the chart before ArgoCD.
 # Prometheus finds the pods behind the Service "tpfoyer" and reads each of them every 30 seconds.
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
@@ -8,6 +8,8 @@ metadata:
   namespace: tpfoyer
   labels:
     app: tpfoyer
+  annotations:
+    argocd.argoproj.io/sync-wave: "1" # with the back
 spec:
   selector:
     matchLabels:

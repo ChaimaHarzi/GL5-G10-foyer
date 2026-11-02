@@ -1,0 +1,20 @@
+# What ArgoCD deploys from git in the namespace tpfoyer (GitOps).
+# The namespace, the gp3 StorageClass and the MySQL Secret are created before by Ansible (role cluster_base).
+# Order of deployment (annotation argocd.argoproj.io/sync-wave): MySQL (0), then the back and its ServiceMonitor (1),
+# then the front (2); ArgoCD waits until a wave is ready before the next one.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - mysql.yaml
+  - app.yaml
+  - servicemonitor.yaml
+  - front.yaml
+# Images of the application: the names tpfoyer-back and tpfoyer-front in the Deployments are replaced by these.
+# Written by Jenkins at each build (stage UPDATE MANIFESTS): the commit "Deploy images #N" says which version runs.
+images:
+  - name: tpfoyer-back
+    newName: chaimaigl/tpfoyer
+    newTag: 'latest'
+  - name: tpfoyer-front
+    newName: chaimaigl/tpfoyer-front
+    newTag: 'latest'

@@ -1,11 +1,13 @@
 # The Angular front: 2 Nginx pods behind the only public AWS load balancer.
 # Nginx serves the Angular pages and forwards /tpFoyer17/... (API, Swagger) to the back.
-# __IMAGE__ is replaced by Jenkins with the front image of the build (e.g. chaimaigl/tpfoyer-front:23).
+# The image tpfoyer-front is replaced by Kustomize with the front image of the build (k8s/kustomization.yaml).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: tpfoyer-front
   namespace: tpfoyer
+  annotations:
+    argocd.argoproj.io/sync-wave: "2" # after the back: at start-up, Nginx resolves the Service "tpfoyer" of its proxy_pass
 spec:
   replicas: 2
   selector:
@@ -23,7 +25,7 @@ spec:
     spec:
       containers:
         - name: tpfoyer-front
-          image: __IMAGE__
+          image: tpfoyer-front
           ports:
             - containerPort: 80
           env:
@@ -52,6 +54,8 @@ kind: Service
 metadata:
   name: tpfoyer-front
   namespace: tpfoyer
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
 spec:
   type: LoadBalancer
   selector:

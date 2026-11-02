@@ -1,0 +1,53 @@
+# Settings of the argo-cd chart for the tpFoyer cluster: only what is needed to deploy one application from git.
+
+# Not used here: login with GitHub/SSO (dex), messages to Slack or mail (notifications),
+# applications generated from templates (ApplicationSet)
+dex:
+  enabled: false
+notifications:
+  enabled: false
+applicationSet:
+  replicas: 0
+
+configs:
+  params:
+    # The web UI is served in plain HTTP behind the AWS load balancer (no certificate in this project)
+    server.insecure: true
+
+# Compares git with the cluster and applies the differences
+controller:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+# Clones the repository (login: Secret created by Ansible) and builds the manifests with Kustomize
+repoServer:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+
+# Web UI and API: public address (AWS load balancer), protected by the admin password
+server:
+  service:
+    type: LoadBalancer
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
+# Cache of the controller
+redis:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 128Mi

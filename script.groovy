@@ -128,6 +128,36 @@ def deployFrontImage() {
     sh 'docker logout'
 }
 
+// GitOps: writes the images of this build in k8s/kustomization.yaml and pushes the commit to GITOPS_BRANCH.
+// ArgoCD reads this file and deploys these images: git says which version runs on EKS.
+// The 'github-pat' token is given to git by a credential helper: it never appears in a URL or in .git/config.
+// "[skip ci]": this commit must not start a new build if a webhook is added one day.
+def updateManifests() {
+    withCredentials([usernamePassword(credentialsId: 'github-pat',
+            usernameVariable: 'GITHUB_USER',
+            passwordVariable: 'GITHUB_TOKEN')]) {
+        sh '''
+            sed -i \
+              -e "/name: tpfoyer-back$/,/newTag:/{s|newName: .*|newName: $IMAGE_NAME|;s|newTag: .*|newTag: '$BUILD_NUMBER'|}" \
+              -e "/name: tpfoyer-front$/,/newTag:/{s|newName: .*|newName: $FRONT_IMAGE_NAME|;s|newTag: .*|newTag: '$BUILD_NUMBER'|}" \
+              k8s/kustomization.yaml
+            git diff k8s/kustomization.yaml
+            git -c user.name=Jenkins -c user.email=jenkins@tpfoyer.local \
+              commit -m "Deploy images #$BUILD_NUMBER [skip ci]" k8s/kustomization.yaml
+
+            # Commits pushed to the branch since the checkout of this build are kept: ours goes on top of them
+            # (--autostash: the pom.xml changed by a release build stays as it is in the workspace)
+            HELPER='!f() { echo "username=$GITHUB_USER"; echo "password=$GITHUB_TOKEN"; }; f'
+            git -c credential.helper= -c credential.helper="$HELPER" fetch origin "$GITOPS_BRANCH"
+            git -c user.name=Jenkins -c user.email=jenkins@tpfoyer.local rebase --autostash FETCH_HEAD
+            git -c credential.helper= -c credential.helper="$HELPER" push origin "HEAD:refs/heads/$GITOPS_BRANCH"
+        '''
+    }
+    // The commit ArgoCD must deploy, checked by the stage SYNC & VERIFY
+    env.GITOPS_REVISION = sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
+    echo "Images of build #${env.BUILD_NUMBER} written in git: commit ${env.GITOPS_REVISION}"
+}
+
 // Wraps EKS commands: injects the AWS keys from the Jenkins credentials and points kubectl
 // at the kubeconfig written in step 11 (kept in the workspace of this build).
 def withEks(Closure body) {
@@ -162,11 +192,14 @@ def setupTerraform() {
         dir('terraform') {
             sh 'terraform init -input=false -reconfigure -backend-config="bucket=$TF_STATE_BUCKET"'
             if (params.TF_ACTION == 'destroy') {
-                // The load balancers (front, Grafana) and the MySQL disk are created by Kubernetes, not by Terraform:
-                // delete the application and the monitoring first, so AWS removes them before Terraform deletes the network.
+                // The load balancers (front, Grafana, ArgoCD) and the MySQL disk are created by Kubernetes, not by Terraform:
+                // delete the application, the monitoring and ArgoCD first, so AWS removes them before Terraform deletes the network.
+                // The ArgoCD Application goes first: otherwise ArgoCD would recreate the application while it is deleted
+                // ("|| true": the Application type does not exist if ArgoCD was never installed).
                 sh '''
                     if terraform output -raw kubeconfig > "$KUBECONFIG" 2>/dev/null; then
-                      kubectl delete namespace tpfoyer monitoring --ignore-not-found --timeout=10m
+                      kubectl -n argocd delete applications.argoproj.io --all --ignore-not-found || true
+                      kubectl delete namespace tpfoyer monitoring argocd --ignore-not-found --timeout=10m
                       kubectl wait --for=delete pv --all --timeout=5m || true
                     fi
                 '''
@@ -191,9 +224,9 @@ def updateKubeconfig() {
 }
 
 // Configures the cluster with Ansible (ansible/cluster.yml): namespace, StorageClass, MySQL Secret,
-// then Prometheus and Grafana (role monitoring).
+// then Prometheus and Grafana (role monitoring), then ArgoCD and the application it follows (role argocd).
 // Ansible runs here, in the Jenkins container, and reaches the EKS API with the same kubeconfig and AWS keys as kubectl.
-// The logins of the 'mysql-creds' and 'grafana-admin' credentials are given as environment variables (never in git).
+// The logins of the 'mysql-creds', 'grafana-admin' and 'github-pat' credentials are given as environment variables (never in git).
 def configureCluster() {
     withEks {
         withCredentials([
@@ -202,7 +235,10 @@ def configureCluster() {
                         passwordVariable: 'DB_PASSWORD'),
                 usernamePassword(credentialsId: 'grafana-admin',
                         usernameVariable: 'GRAFANA_ADMIN_USER',
-                        passwordVariable: 'GRAFANA_ADMIN_PASSWORD')
+                        passwordVariable: 'GRAFANA_ADMIN_PASSWORD'),
+                usernamePassword(credentialsId: 'github-pat',
+                        usernameVariable: 'GITHUB_USER',
+                        passwordVariable: 'GITHUB_TOKEN')
         ]) {
             // ANSIBLE_CONFIG: use ansible.cfg even if the folder is world-writable (Ansible ignores it otherwise)
             dir('ansible') {
@@ -212,24 +248,24 @@ def configureCluster() {
     }
 }
 
-// Step 12: deploys MySQL, the back and the front on EKS, then waits until the new versions are running.
-// The namespace, the StorageClass and the MySQL Secret are created before by Ansible (configureCluster).
-// Each build deploys its own image tags, which makes Kubernetes perform rolling updates.
-def deployToAwsKubernetes() {
+// Step 12 (GitOps): ArgoCD deploys MySQL, the back and the front from git; Jenkins only checks the result.
+// Asks ArgoCD to read git now (instead of within 3 minutes), then waits until the cluster runs the commit of
+// UPDATE MANIFESTS (Synced) and every pod is ready after the rolling updates (Healthy). Fails after 10 minutes.
+def syncAndVerify() {
     withEks {
-        sh 'kubectl apply -f k8s/mysql.yaml'
-        sh 'kubectl -n tpfoyer rollout status statefulset/mysql --timeout=5m'
-
-        // __IMAGE__ in app.yaml becomes the image pushed by this build
-        sh "sed 's|__IMAGE__|${env.IMAGE_NAME}:${env.BUILD_NUMBER}|' k8s/app.yaml | kubectl apply -f -"
-        sh 'kubectl -n tpfoyer rollout status deployment/tpfoyer --timeout=10m'
-
-        // Prometheus reads the metrics of the back (the ServiceMonitor type comes with the chart installed by Ansible)
-        sh 'kubectl apply -f k8s/servicemonitor.yaml'
-
-        // The front after the back: at start-up, Nginx resolves the Service "tpfoyer" of its proxy_pass
-        sh "sed 's|__IMAGE__|${env.FRONT_IMAGE_NAME}:${env.BUILD_NUMBER}|' k8s/front.yaml | kubectl apply -f -"
-        sh 'kubectl -n tpfoyer rollout status deployment/tpfoyer-front --timeout=5m'
+        sh 'kubectl -n argocd annotate application tpfoyer argocd.argoproj.io/refresh=normal --overwrite'
+        sh '''
+            for i in $(seq 1 60); do
+              STATE=$(kubectl -n argocd get application tpfoyer \
+                -o jsonpath='{.status.sync.revision} {.status.sync.status} {.status.health.status}')
+              echo "ArgoCD: $STATE"
+              [ "$STATE" = "$GITOPS_REVISION Synced Healthy" ] && exit 0
+              sleep 10
+            done
+            echo "ArgoCD did not deploy commit $GITOPS_REVISION within 10 minutes:"
+            kubectl -n argocd get application tpfoyer -o jsonpath='{.status.operationState.message}{"\\n"}{.status.conditions}{"\\n"}'
+            exit 1
+        '''
 
         sh 'kubectl -n tpfoyer get pods,svc'
         // The only public address is the load balancer of the front; it is known a few seconds after
@@ -244,6 +280,8 @@ def deployToAwsKubernetes() {
             echo "Swagger:     http://$HOST/tpFoyer17/swagger-ui/index.html"
             GRAFANA=$(kubectl -n monitoring get svc monitoring-grafana -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
             echo "Grafana:     http://$GRAFANA/   (login: Jenkins credential grafana-admin)"
+            ARGOCD=$(kubectl -n argocd get svc argocd-server -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+            echo "ArgoCD:      http://$ARGOCD/   (login: admin, password in the Secret argocd-initial-admin-secret)"
         '''
     }
 }

@@ -1,10 +1,12 @@
 # The tpFoyer API (Spring Boot): 2 pods behind an internal Service, reached through the front (k8s/front.yaml).
-# __IMAGE__ is replaced by Jenkins with the image of the build (e.g. fourat10/tpfoyer:23).
+# The image tpfoyer-back is replaced by Kustomize with the image of the build (k8s/kustomization.yaml).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: tpfoyer
   namespace: tpfoyer
+  annotations:
+    argocd.argoproj.io/sync-wave: "1" # after MySQL
 spec:
   replicas: 2
   selector:
@@ -22,7 +24,7 @@ spec:
     spec:
       containers:
         - name: tpfoyer
-          image: __IMAGE__
+          image: tpfoyer-back
           ports:
             - containerPort: 8082
           env:
@@ -72,6 +74,8 @@ metadata:
   namespace: tpfoyer
   labels:
     app: tpfoyer
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   type: ClusterIP
   selector:

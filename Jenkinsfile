@@ -29,6 +29,8 @@ pipeline {
         TF_VAR_cluster_name='tpfoyer-eks-chaima'
         // S3 bucket holding the Terraform state (created once by hand, see step 2).
         TF_STATE_BUCKET = 'tpfoyer-tfstate-chaima-058264229450'
+        // Branch where Jenkins writes the image tags read by ArgoCD (the branch built by this job).
+        GITOPS_BRANCH = 'shaimaHarzi'
 
         // Who receives the build notifications (success and failure).
         NOTIFY_EMAIL = 'chaima.harzi@etudiant-fst.utm.tn'
@@ -169,6 +171,15 @@ pipeline {
                         }
                     }
                 }
+
+                // GitOps: the images just pushed are written in git (k8s/kustomization.yaml), where ArgoCD reads them
+                stage('UPDATE MANIFESTS') {
+                    steps {
+                        script {
+                            gv.updateManifests()
+                        }
+                    }
+                }
             }
         }
 
@@ -201,8 +212,8 @@ pipeline {
                     }
                 }
 
-                // Ansible equips the cluster (namespace, StorageClass, MySQL Secret, Prometheus + Grafana)
-                // before the application is deployed
+                // Ansible equips the cluster (namespace, StorageClass, MySQL Secret, Prometheus + Grafana, ArgoCD)
+                // and tells ArgoCD which application to follow
                 stage('CONFIGURE CLUSTER') {
                     steps {
                         script {
@@ -211,10 +222,11 @@ pipeline {
                     }
                 }
 
-                stage('DEPLOY TO AWS KUBERNETES') {
+                // ArgoCD deploys the commit of UPDATE MANIFESTS; Jenkins waits until it runs and is ready
+                stage('SYNC & VERIFY') {
                     steps {
                         script {
-                            gv.deployToAwsKubernetes()
+                            gv.syncAndVerify()
                         }
                     }
                 }
