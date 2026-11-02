@@ -212,7 +212,7 @@ pipeline {
                     }
                 }
 
-                // Ansible equips the cluster (namespace, StorageClass, MySQL Secret, Prometheus + Grafana, ArgoCD)
+                // Ansible equips the cluster (namespace, StorageClass, MySQL Secret, metrics-server, Prometheus + Grafana, ArgoCD)
                 // and tells ArgoCD which application to follow
                 stage('CONFIGURE CLUSTER') {
                     steps {

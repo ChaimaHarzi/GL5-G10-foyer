@@ -1,0 +1,8 @@
+# Settings of the metrics-server chart: the defaults work on EKS, only the reserved resources are smaller
+# (it keeps only the last CPU/memory value of each pod, a few MB for this cluster).
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 128Mi

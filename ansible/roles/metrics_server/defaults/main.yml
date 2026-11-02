@@ -1,0 +1,8 @@
+# Namespace of the system components of the cluster (CoreDNS, kube-proxy...)
+metrics_server_namespace: kube-system
+
+# Helm release and chart (version pinned: every build installs exactly the same thing)
+metrics_server_release: metrics-server
+metrics_server_chart: metrics-server/metrics-server
+metrics_server_chart_version: "3.14.0"
+metrics_server_repo_url: https://kubernetes-sigs.github.io/metrics-server/

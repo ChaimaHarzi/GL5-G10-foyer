@@ -224,7 +224,8 @@ def updateKubeconfig() {
 }
 
 // Configures the cluster with Ansible (ansible/cluster.yml): namespace, StorageClass, MySQL Secret,
-// then Prometheus and Grafana (role monitoring), then ArgoCD and the application it follows (role argocd).
+// then metrics-server (role metrics_server), Prometheus and Grafana (role monitoring),
+// then ArgoCD and the application it follows (role argocd).
 // Ansible runs here, in the Jenkins container, and reaches the EKS API with the same kubeconfig and AWS keys as kubectl.
 // The logins of the 'mysql-creds', 'grafana-admin' and 'github-pat' credentials are given as environment variables (never in git).
 def configureCluster() {

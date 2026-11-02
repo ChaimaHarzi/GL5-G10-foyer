@@ -1,0 +1,34 @@
+# metrics-server reads the CPU and memory of every pod from the kubelet of each node (every 15 s) and serves the
+# latest values through the Kubernetes Metrics API (metrics.k8s.io), used by the HorizontalPodAutoscalers and "kubectl top".
+
+- name: The Helm repository of metrics-server is known
+  kubernetes.core.helm_repository:
+    name: metrics-server
+    repo_url: "{{ metrics_server_repo_url }}"
+
+# Installs the chart the first time, then upgrades it only when the version or the values change
+- name: Metrics-server is installed
+  kubernetes.core.helm:
+    name: "{{ metrics_server_release }}"
+    chart_ref: "{{ metrics_server_chart }}"
+    chart_version: "{{ metrics_server_chart_version }}"
+    release_namespace: "{{ metrics_server_namespace }}"
+    values_files:
+      - "{{ role_path }}/files/values.yaml"
+    update_repo_cache: true
+    wait: true
+    wait_timeout: 5m
+
+# The pod can be ready a little before the API server accepts its API: wait until the Metrics API is available
+- name: The Metrics API answers
+  kubernetes.core.k8s_info:
+    api_version: apiregistration.k8s.io/v1
+    kind: APIService
+    name: v1beta1.metrics.k8s.io
+  register: metrics_server_api
+  until: >-
+    metrics_server_api.resources | length > 0 and
+    (metrics_server_api.resources[0].status.conditions | default([])
+     | selectattr('type', 'equalto', 'Available') | map(attribute='status') | first | default('False')) == 'True'
+  retries: 30
+  delay: 10

@@ -6,5 +6,6 @@
   gather_facts: false
   roles:
     - cluster_base
+    - metrics_server
     - monitoring
     - argocd
