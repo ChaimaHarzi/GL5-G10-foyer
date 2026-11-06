@@ -15,7 +15,7 @@ resources:
 images:
   - name: tpfoyer-back
     newName: chaimaigl/tpfoyer
-    newTag: '49'
+    newTag: '50'
   - name: tpfoyer-front
     newName: chaimaigl/tpfoyer-front
-    newTag: '49'
+    newTag: '50'
