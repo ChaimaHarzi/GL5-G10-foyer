@@ -35,8 +35,9 @@ class ChambreServiceMockitoTest {
         when(chambreRepository.save(chambre)).thenReturn(chambre);
 
         Chambre result = chambreService.addChambre(chambre);
-
+       // Verify that the returned chambre is the same as the one passed in 
         assertSame(chambre, result);
+        // Verify that the repository's save method was called with the correct chambre
         verify(chambreRepository).save(chambre);
     }
 

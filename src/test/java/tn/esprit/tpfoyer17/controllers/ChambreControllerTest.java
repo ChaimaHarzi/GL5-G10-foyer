@@ -37,7 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ChambreControllerTest {
 
     @Autowired
-    MockMvc mockMvc;
+    MockMvc mockMvc;//faux navigateur pour simuler les requêtes HTTP
 
     @MockBean
     IChambreService chambreService;
